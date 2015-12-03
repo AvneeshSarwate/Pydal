@@ -173,8 +173,17 @@ def printLevels(node):
 
 	print "  -  ".join(map(str, lists[a(i)]))
 
-	
-test = lambda s : printLevels(parseExpression(tokenize(s), 0)[0])
+
+def test(testStr):
+	print "TEST CASE:", testStr
+	node = parseExpression(tokenize(testStr), 0)[0]
+	printLevels(node)
+	print "--------------------"
+	renderedNode = node.render(1.0)
+	for t in renderedNode:
+		print t[0], ":", t[1]
+	print "\n\n----------------------------------------------------------------"
+	print "----------------------------------------------------------------\n\n"
 
 cases = [
 	"a a a",
@@ -188,6 +197,4 @@ cases = [
 	]
 
 for c in cases:
-	print "TEST CASE:", c
 	test(c)
-	print "\n\n-----------------------------------------------\n\n"

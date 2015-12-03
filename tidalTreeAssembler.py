@@ -34,14 +34,14 @@ import itertools
 
 
 def mergeChildren(childList):
-	timeToSet = {} #combine the children 
+	timeToTuple = {} #combine the children 
 	for timePitchTuple in itertools.chain.from_iterable(childList):
-		if timePitchTuple[0] not in timeToSet:
-			timeToSet[timePitchTuple[0]] = timePitchTuple
+		if timePitchTuple[0] not in timeToTuple:
+			timeToTuple[timePitchTuple[0]] = timePitchTuple
 		else:
-			timeToSet[timePitchTuple[0]] = (timePitchTuple[0], timeToSet[timePitchTuple[0]] | timePitchTuple[1])
+			timeToTuple[timePitchTuple[0]] = (timePitchTuple[0], timeToTuple[timePitchTuple[0]][1] | timePitchTuple[1])
 
-	return sorted(timeToSet.values(), None, lambda tup: tup[0])
+	return sorted(timeToTuple.values(), None, lambda tup: tup[0])
 
 #render for SquareBracket:
 #	render children
@@ -64,7 +64,7 @@ class SquareBracketNode:
 		for i in range(len(renderedGrandchildren)):
 			renderedChild = []
 			grandChildFrac = frac / len(renderedGrandchildren[i])
-			for j in range(len(renderedGrandchildren[i])):
+			for j in range(len(renderedGrandchildren[i])): #TODO: turn this loop into common function grandChild->child
 				timeShift = lambda timePitchTuple: (timePitchTuple[0]+(j*grandChildFrac), timePitchTuple[1])
 				renderedChild += map(timeShift, renderedGrandchildren[i][j])
 			renderedChildren.append(renderedChild)
@@ -83,7 +83,7 @@ class SymbolNode:
 		self.type = "Symbol"
 
 	def render(self, frac):
-		return [(frac, Set(self.children))]
+		return [(0, set(self.children))]
 
 	def __str__(self):
 		return self.children[0]
@@ -99,7 +99,16 @@ class ExpressionNode:
 	#render - "cast" it as a SquareBracketNode with self 
 	#as the only child and return the render of that SquareBracketNode
 	def render(self, frac):
-		return SquareBracketNode([self]).render(frac)
+		childFrac = frac / len(self.children)
+		renderedChildren = [c.render(childFrac) for c in self.children]
+		#TODO: turn this loop into common function grandChild->child
+		renderedExp = []
+		for i in range(len(self.children)):
+			timeShift = lambda timePitchTuple: (timePitchTuple[0]+(i* childFrac), timePitchTuple[1])
+			renderedExp += map(timeShift, renderedChildren[i])
+
+		return renderedExp
+
 
 	def __str__(self):
 		return ".".join([str(c) for c in self.children])
@@ -121,9 +130,10 @@ class MultNode:
 	def render(self, frac):
 		renderedChild = self.child.render(frac / self.multNum)
 		multipliedChildren = []
-		for i in range(self.multNum):
+		for i in range(self.multNum): #TODO: turn this loop into common function grandChild->child
 			timeShift = lambda timePitchTuple: (timePitchTuple[0]+(i* frac/self.multNum), timePitchTuple[1])
 			multipliedChildren += map(timeShift, renderedChild)
+		return multipliedChildren
 
 	def __str__(self):
 		return str(self.child) + "*" + str(self.multNum)
@@ -135,7 +145,7 @@ class CurlyBracketNode:
 		self.children = children
 		self.leaf = False
 		#must be set in initial construction wrt self.children
-		self.alignmentInds = [0] * len(self.children)
+		self.alignmentInds = None
 
 		#should this be saved state? how do we want to hanlde <> and () - "choice" operators?
 		#we could make it st choice operators must contain a single "overlay" operator ({} or []) 
@@ -148,6 +158,9 @@ class CurlyBracketNode:
 	#frac thus represents the fraction of the total loop time that
 	#this sub expression takes [0, 1]
 	def render(self, frac):
+		if self.alignmentInds is None:
+			self.alignmentInds = [0] * len(self.children)
+
 		#allign and select grandchildren 
 		#use grandchild expressions to figure out this node's expressions
 		#	ex, {bd lt, bd sn sn} would have children with expressions "bd lt" and "bd sn sn",
@@ -155,9 +168,9 @@ class CurlyBracketNode:
 		#	while its own expressions would be "bd/bd lt/sn", "bd/sn lt/bd", and "bd/sn lt/sn"
 		# 	in that order, with "a/b" meaning samples a and b are played at the same time
 		#this is a stateful computation and will return the "next" alignment on every call
-		alignment = [[] for i in len(self.children)]
+		alignment = [[] for i in range(len(self.children))]
 		for i in range(len(self.children[0].children)):
-			for j in len(self.children):
+			for j in range(len(self.children)):
 				alignment[j].append( self.children[j].children[ self.alignmentInds[j] ] )
 				self.alignmentInds[j] = (self.alignmentInds[j]+1) % len(self.children[j].children)
 
@@ -168,7 +181,7 @@ class CurlyBracketNode:
 		#	a "rendered" expression is a [(float, set)], where float is in [0, 1] and 
 		#	represents a point of time in a loop, and set is the set of samples played 
 		#	at that point in time
-		grandChildFrac = frac / len(self.children[0])
+		grandChildFrac = frac / len(self.children[0].children)
 		for i in range(len(alignment)):
 			for j in range(len(alignment[i])):
 				alignment[i][j] = alignment[i][j].render(grandChildFrac)
@@ -179,7 +192,7 @@ class CurlyBracketNode:
 		renderedChildren = []#combine the "grandchildren" into "children"
 		for i in range(len(alignment)):
 			renderedChild = []
-			for j in range(len(alignment[i])):
+			for j in range(len(alignment[i])):#TODO: turn this loop into common function grandChild->child
 				timeShift = lambda timePitchTuple: (timePitchTuple[0]+(j*grandChildFrac), timePitchTuple[1])
 				renderedChild += map(timeShift, alignment[i][j])
 			renderedChildren.append(renderedChild)
