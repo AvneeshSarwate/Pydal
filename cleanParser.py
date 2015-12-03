@@ -5,9 +5,12 @@
 # 
 # <mult> ::= "*" | "x"
 #
-# additional features 
+# <symbol> ::= [a-zA-Z0-9][a-zA-Z0-9]*(:[0-9][0-9]*){0,1}
+#
+# additional features - NOT SUPPORTED, even though "x" is in the parser
 # 	- "x": "new step repeat" - i.e a bx3 c -> a b b b c, whereas a b*3 c -> a [b b b] c
-# 	- <pat1, pat2> - plays the "next" pattern every time around 
+# 	- <pat1, pat2, ...> - plays the "next" pattern every time around
+#	- (pat1, pat2, ...) - plays a random pattern from the set every time around
 
 
 #nodeTypes determine how their children are aggregated
@@ -19,6 +22,9 @@ import itertools
 import string 
 import tidalTreeAssembler as nodes
 
+def parse(inputStr):
+	tokens = tokenize(inputStr)
+	return parseExpression(tokens, 0)[0]
 
 def tokenize(inputStr):
 	delimiters = ["]", "[", "{", "}", "<", ">" "*", "x", ","]
@@ -46,49 +52,21 @@ def isComma(s):
 def isSymbol(s): 
 	return allIn(s, string.letters+string.digits+":") and s[0] != ":" and s[-1] != ":"
 
-class Node():
-	def __init__(self):
-		self.children = []
-		self.leaf = False
+# through all the parse* functions
+# ind should always point to the next token to be read
+# TODO: make sure this is enforced
 
-	def __str__(self):
-		if self.leaf:
-			return self.children[0]
-		else: 
-			return ".".join([str(c) for c in self.children])
-
-#will get fleshed out into classes. only need simple tree to test AST contruction
-def squareBracketNode():
-	return Node()
-def curlyBracketNode():
-	return Node()
-def expressionNode():
-	return Node()
-def symbolNode(token):
-	n = Node()
-	n.leaf = True
-	n.children = [token]
-	return n
-def symbolMultNode(tokenList, i):
-	n = Node()
-	n.leaf = False
-	n.children = [symbolNode(tokenList[i]), symbolNode(tokenList[i+1]+tokenList[i+2])]
-	return n
-def parenMultNode(node, tokenList, i):
-	n = Node()
-	n.children = [node, symbolNode(tokenList[i]+tokenList[i+1])]
-	return n 
-
-
+def parseMult(tokenList, ind, node):
+	if isNumber(tokenList[ind+1]):
+		return nodes.MultNode(node, tokenList[ind+1]), ind+2
+	else:
+		raise StopIteration("number must follow muliplication operator")
 
 
 def parseSymbol(tokenList, ind):
-	if ind < len(tokenList)-1 and isMult(tokenList[ind+1]):
-		if ind+1 < len(tokenList)-1 and isNumber(tokenList[ind+2]):
-			symbolNode = nodes.SymbolNode(tokenList[ind:ind+1])
-			return nodes.MultNode(symbolNode, tokenList[ind+2]), ind+3
-		else:
-			raise StopIteration("number must follow muliplication operator")
+	symbolNode = nodes.SymbolNode(tokenList[ind:ind+1])
+	if ind+1 < len(tokenList) and isMult(tokenList[ind+1]):
+		return parseMult(tokenList, ind+1, symbolNode)
 	else:
 		return nodes.SymbolNode(tokenList[ind:ind+1]), ind+1 
 
@@ -107,16 +85,14 @@ def parseParenBlock(tokenList, ind, parseDebug = False):
 		expNode, newInd = parseExpression(tokenList, ind)
 		node.children.append(expNode)
 		if isComma(tokenList[newInd]):
-			if parseDebug:
-				node.children.append(symbolNode(","))
 			newInd += 1
 		ind = newInd
 
 	if (openParen == "[" and tokenList[ind] == "]") or (openParen == "{" and tokenList[ind] == "}"):
-		if parseDebug:
-			node.children.insert(0, symbolNode(openParen)) #DEBUG
-			node.children.append(symbolNode(tokenList[ind]))
-		return node, ind+1
+		if ind+1 < len(tokenList) and isMult(tokenList[ind+1]):
+			return parseMult(tokenList, ind+1, node)
+		else:
+			return node, ind+1
 	else:
 		raise StopIteration("paren at index " + startInd + "must be closed")
 
@@ -131,20 +107,12 @@ def parseExpression(tokenList, ind):
 		newInd = .5
 
 		if isSymbol(tokenList[ind]):
-			symbolNode, newInd = parseSymbol(tokenList, ind)
-			node.children.append(symbolNode)
+			symbolOrMultNode, newInd = parseSymbol(tokenList, ind)
+			node.children.append(symbolOrMultNode)
 
 		elif isOpenParen(tokenList[ind]):
-			parenNode, newInd = parseParenBlock(tokenList, ind)
-			if newInd < len(tokenList)-1 and isMult(tokenList[newInd]):
-				if newInd+1 < len(tokenList) and isNumber(tokenList[newInd+1]):
-					multNode = nodes.MultNode(parenNode, tokenList[newInd+1])
-					node.children.append(multNode)
-					newInd += 2
-				else:
-					raise StopIteration("number must follow muliplication operator")
-			else:
-				node.children.append(parenNode)
+			parenOrMultNode, newInd = parseParenBlock(tokenList, ind)
+			node.children.append(parenOrMultNode)
 		else:
 			raise StopIteration("can only start expressions with symbols or open paren: ") 
 
@@ -176,7 +144,7 @@ def printLevels(node):
 
 def test(testStr):
 	print "TEST CASE:", testStr
-	node = parseExpression(tokenize(testStr), 0)[0]
+	node = parse(testStr)
 	printLevels(node)
 	print "--------------------"
 	renderedNode = node.render(1.0)

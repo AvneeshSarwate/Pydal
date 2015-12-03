@@ -9,6 +9,7 @@
 
 
 import itertools
+import copy
 
 
 #other node types needed: SquareBracket, 
@@ -33,7 +34,7 @@ import itertools
 #	of the ax5
 
 
-def mergeChildren(childList):
+def flattenChildren(childList):
 	timeToTuple = {} #combine the children 
 	for timePitchTuple in itertools.chain.from_iterable(childList):
 		if timePitchTuple[0] not in timeToTuple:
@@ -42,6 +43,14 @@ def mergeChildren(childList):
 			timeToTuple[timePitchTuple[0]] = (timePitchTuple[0], timeToTuple[timePitchTuple[0]][1] | timePitchTuple[1])
 
 	return sorted(timeToTuple.values(), None, lambda tup: tup[0])
+
+def mergeRenderedChildren(childFrac, children):
+	merge = []
+	for i in range(len(children)):
+		timeShift = lambda timePitchTuple: (timePitchTuple[0]+(i*childFrac), timePitchTuple[1])
+		merge += map(timeShift, children[i])
+	return merge
+
 
 #render for SquareBracket:
 #	render children
@@ -62,14 +71,10 @@ class SquareBracketNode:
 		#render expression ("assemble" grandchildren)
 		renderedChildren = []
 		for i in range(len(renderedGrandchildren)):
-			renderedChild = []
 			grandChildFrac = frac / len(renderedGrandchildren[i])
-			for j in range(len(renderedGrandchildren[i])): #TODO: turn this loop into common function grandChild->child
-				timeShift = lambda timePitchTuple: (timePitchTuple[0]+(j*grandChildFrac), timePitchTuple[1])
-				renderedChild += map(timeShift, renderedGrandchildren[i][j])
-			renderedChildren.append(renderedChild)
+			renderedChildren.append(mergeRenderedChildren(grandChildFrac, renderedGrandchildren[i]))
 
-		return mergeChildren(renderedChildren)
+		return flattenChildren(renderedChildren)
 
 	def __str__(self):
 		return "["+".".join([str(c) for c in self.children])+"]"
@@ -90,7 +95,7 @@ class SymbolNode:
 
 class ExpressionNode:
 
-	def __init__(self, children = []):
+	def __init__(self, children):
 		self.children = children
 		self.type = "Expression"
 		self.leaf = False
@@ -101,13 +106,8 @@ class ExpressionNode:
 	def render(self, frac):
 		childFrac = frac / len(self.children)
 		renderedChildren = [c.render(childFrac) for c in self.children]
-		#TODO: turn this loop into common function grandChild->child
-		renderedExp = []
-		for i in range(len(self.children)):
-			timeShift = lambda timePitchTuple: (timePitchTuple[0]+(i* childFrac), timePitchTuple[1])
-			renderedExp += map(timeShift, renderedChildren[i])
 
-		return renderedExp
+		return mergeRenderedChildren(childFrac, renderedChildren)
 
 
 	def __str__(self):
@@ -128,12 +128,11 @@ class MultNode:
 
 
 	def render(self, frac):
-		renderedChild = self.child.render(frac / self.multNum)
-		multipliedChildren = []
-		for i in range(self.multNum): #TODO: turn this loop into common function grandChild->child
-			timeShift = lambda timePitchTuple: (timePitchTuple[0]+(i* frac/self.multNum), timePitchTuple[1])
-			multipliedChildren += map(timeShift, renderedChild)
-		return multipliedChildren
+		childFrac = frac / self.multNum
+		renderedChild = self.child.render(childFrac)
+		childCopies = [copy.deepcopy(renderedChild) for i in range(self.multNum)]
+		return mergeRenderedChildren(childFrac, childCopies)
+
 
 	def __str__(self):
 		return str(self.child) + "*" + str(self.multNum)
@@ -191,13 +190,9 @@ class CurlyBracketNode:
 		#	forms to render the final version of this "state" of the expression
 		renderedChildren = []#combine the "grandchildren" into "children"
 		for i in range(len(alignment)):
-			renderedChild = []
-			for j in range(len(alignment[i])):#TODO: turn this loop into common function grandChild->child
-				timeShift = lambda timePitchTuple: (timePitchTuple[0]+(j*grandChildFrac), timePitchTuple[1])
-				renderedChild += map(timeShift, alignment[i][j])
-			renderedChildren.append(renderedChild)
+			renderedChildren.append(mergeRenderedChildren(grandChildFrac, alignment[i]))
 
-		return mergeChildren(renderedChildren)
+		return flattenChildren(renderedChildren)
 
 
 	def __str__(self):
@@ -205,6 +200,4 @@ class CurlyBracketNode:
 
 	#how many times this node must be evaluated before it returns the same expression
 	#def getPeriod():  
-
-
 
