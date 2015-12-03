@@ -49,7 +49,7 @@ def mergeChildren(childList):
 #	combine children 
 class SquareBracketNode:
 
-	def __init__(self, children = [], frac = 1):
+	def __init__(self, children, frac = 1):
 		self.children = children
 		self.leaf = False
 		self.frac = frac
@@ -72,7 +72,7 @@ class SquareBracketNode:
 
 class SymbolNode:
 
-	def __init__(self, children = [], frac = 1):
+	def __init__(self, children, frac = 1):
 		self.children = children
 		self.frac = frac
 		self.leaf = True
@@ -84,11 +84,30 @@ class ExpressionNode:
 
 	def __init__(self, children = []):
 		self.children = children
-		
+
+class MultNode:
+
+	#child is either a SymbolNode or a *BracketNode
+	#multNum is an integer 
+	#TODO: "x" multiplier and fractional multiples 
+	def __init__(self, child, multNum, frac = 1):
+		self.child = child
+		self.multNum = int(multNum)
+		self.frac = frac
+
+
+	def render(frac):
+		renderedChild = self.child.render(frac / self.multNum)
+		multipliedChildren = []
+		for i in range(self.multNum):
+			timeShift = lambda timePitchTuple: (timePitchTuple[0]+(i* frac/self.multNum), timePitchTuple[1])
+			multipliedChildren += map(timeShift, renderedChild)
+
+
 
 class CurlyBracketNode:
 
-	def __init__(self, children = [], frac = 1):
+	def __init__(self, children, frac = 1):
 		self.children = children
 		self.leaf = False
 		#must be set in initial construction wrt self.children
