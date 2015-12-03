@@ -5,7 +5,7 @@
 # for a tree, you 
 
 
-"{{bd bd, ho ho hc} {~ sn:2 ~, ~ cp}, {bin bin ~, ~ bottle ~ cp}} "
+# "{{bd bd, ho ho hc} {~ sn:2 ~, ~ cp}, {bin bin ~, ~ bottle ~ cp}} "
 
 
 import itertools
@@ -53,8 +53,9 @@ class SquareBracketNode:
 		self.children = children
 		self.leaf = False
 		self.frac = frac
+		self.type = "SquareBracket"
 
-	def render(frac):
+	def render(self, frac):
 		#render grandchildren
 		renderedGrandchildren = [[gc.render(frac / len(c.children)) for gc in c.children] for c in self.children]
 
@@ -70,20 +71,38 @@ class SquareBracketNode:
 
 		return mergeChildren(renderedChildren)
 
+	def __str__(self):
+		return "["+".".join([str(c) for c in self.children])+"]"
+
 class SymbolNode:
 
 	def __init__(self, children, frac = 1):
 		self.children = children
 		self.frac = frac
 		self.leaf = True
+		self.type = "Symbol"
 
-	def render(frac):
+	def render(self, frac):
 		return [(frac, Set(self.children))]
+
+	def __str__(self):
+		return self.children[0]
 
 class ExpressionNode:
 
 	def __init__(self, children = []):
 		self.children = children
+		self.type = "Expression"
+		self.leaf = False
+
+
+	#render - "cast" it as a SquareBracketNode with self 
+	#as the only child and return the render of that SquareBracketNode
+	def render(self, frac):
+		return SquareBracketNode([self]).render(frac)
+
+	def __str__(self):
+		return ".".join([str(c) for c in self.children])
 
 class MultNode:
 
@@ -94,15 +113,20 @@ class MultNode:
 		self.child = child
 		self.multNum = int(multNum)
 		self.frac = frac
+		self.type = "Mult"
+		self.leaf = False
+		self.children = [self.child]
 
 
-	def render(frac):
+	def render(self, frac):
 		renderedChild = self.child.render(frac / self.multNum)
 		multipliedChildren = []
 		for i in range(self.multNum):
 			timeShift = lambda timePitchTuple: (timePitchTuple[0]+(i* frac/self.multNum), timePitchTuple[1])
 			multipliedChildren += map(timeShift, renderedChild)
 
+	def __str__(self):
+		return str(self.child) + "*" + str(self.multNum)
 
 
 class CurlyBracketNode:
@@ -116,13 +140,14 @@ class CurlyBracketNode:
 		#should this be saved state? how do we want to hanlde <> and () - "choice" operators?
 		#we could make it st choice operators must contain a single "overlay" operator ({} or []) 
 		self.frac = frac 
+		self.type = "CurlyBracket"
 
 	#because each expression is potentially nested inside a larger one,
 	#the durations of each term may only be a fraction of their original
 	#length wrt the number of terms in the "parent" expression. 
 	#frac thus represents the fraction of the total loop time that
 	#this sub expression takes [0, 1]
-	def render(frac):
+	def render(self, frac):
 		#allign and select grandchildren 
 		#use grandchild expressions to figure out this node's expressions
 		#	ex, {bd lt, bd sn sn} would have children with expressions "bd lt" and "bd sn sn",
@@ -162,9 +187,11 @@ class CurlyBracketNode:
 		return mergeChildren(renderedChildren)
 
 
+	def __str__(self):
+		return "{"+".".join([str(c) for c in self.children])+"}"
 
 	#how many times this node must be evaluated before it returns the same expression
-	def getPeriod():  
+	#def getPeriod():  
 
 
 
