@@ -16,6 +16,7 @@ class Pydal:
 
 
 	def newChannel(self, num):
+		#send message to superCollider to make new handler for channel
 		return PydalChannel(num, self.superColliderServer, self.superColliderClient)
 
 	@staticmethod
@@ -65,7 +66,8 @@ class PydalChannel:
 		renderList = self.pydalPattern.render()
 		renderStr = ";".join(str(t[0]) + "-" + ",".join(t[1]) for t in renderList)
 		msg = OSC.OSCMessage
-		msg.setAddress("pydalSendUpdate-"+ str(self.num))
+		msg.setAddress("/pydalSendUpdate")
+		msg.append(self.num)
 		msg.append(renderStr)
 		self.superColliderClient.send(msg)
 
@@ -76,6 +78,12 @@ class PydalChannel:
 		msg = OSC.OSCMessage
 		msg.setAddress("pydalPlay-"+ str(self.num))
 		msg.append(renderStr)
+		self.superColliderClient.send(msg)
+
+	def stop(self):
+		msg = OSC.OSCMessage()
+		msg.setAddress("/pydalStop")
+		msg.append(self.num)
 		self.superColliderClient.send(msg)
 
 
