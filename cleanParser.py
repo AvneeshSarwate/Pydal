@@ -164,5 +164,7 @@ cases = [
 	"{lt lt:2, {hc hc:2, ho sn:2 sn:3*2} {bottle bottle bottle, [bin:2 bin] bin:1} bd}"
 	]
 
+statefulCases = ["{a b, c d e, f g h i}"]
+
 for c in cases:
 	test(c)
