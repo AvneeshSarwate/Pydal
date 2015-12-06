@@ -46,6 +46,8 @@ startPattern = {|msg, time, addr, recvPort|
 	});
 	ind = ind % patternList.size;
 
+	if(ind == (patternList.size-1), {pythonOSCport.sendMsg("/pydalGetUpdate-"++msg[1].asString)});
+
 	//save/increment ind
 	channelInd[msg[1]] = ind;
 	["START STEPS IN", patternList[ind][0] - loopFrac].postln;
@@ -72,7 +74,10 @@ playStepGenerator = {|i|
 			if(ind == (patList.size-2), {pythonOSCport.sendMsg("/pydalGetUpdate-"++i)});
 
 			//if last step (or < 20 ms from end?), set backupPat to actual pattern
-			if(ind == (patList.size-1), {channelPatternMap[i] = chanBackupPatMap[i]});
+			if(ind == (patList.size-1), {
+				"DID BACKUP".postln;
+				channelPatternMap[i] = chanBackupPatMap[i]
+			});
 
 			//update indexes appropriately
 			channelInd[i] = (ind+1)%patList.size;
@@ -92,8 +97,8 @@ playStepGenerator = {|i|
 //msg[2] is the backup pattern
 recieveBackupPattern = {|msg, time, addr, recvPort|
 	//parse string and save it to backupmap
-	chanBackupPatMap[msg[1]] = timeListToDurationList.(patternRead.(msg[2]));
-	"GOT BACKUP".postln;
+	["GOT BACKUP", msg[2]].postln;
+	chanBackupPatMap[msg[1]] = timeListToDurationList.(patternRead.(msg[2].asString));
 };
 OSCFunc(recieveBackupPattern, "/pydalSendUpdate");
 
