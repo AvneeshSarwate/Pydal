@@ -7,7 +7,7 @@
 #
 # <symbol> ::= [a-zA-Z0-9][a-zA-Z0-9]*(:[0-9][0-9]*){0,1}
 #
-# additional features - NOT SUPPORTED, even though "x" is in the parser
+# additional features - NOT SUPPORTED YET, even though "x" is in the parser
 # 	- "x": "new step repeat" - i.e a bx3 c -> a b b b c, whereas a b*3 c -> a [b b b] c
 # 	- <pat1, pat2, ...> - plays the "next" pattern every time around
 #	- (pat1, pat2, ...) - plays a random pattern from the set every time around

@@ -79,6 +79,8 @@ class SquareBracketNode:
 	def __str__(self):
 		return "["+".".join([str(c) for c in self.children])+"]"
 
+
+
 class SymbolNode:
 
 	def __init__(self, children, frac = 1):
@@ -100,18 +102,16 @@ class ExpressionNode:
 		self.type = "Expression"
 		self.leaf = False
 
-
-	#render - "cast" it as a SquareBracketNode with self 
-	#as the only child and return the render of that SquareBracketNode
 	def render(self, frac):
 		childFrac = frac / len(self.children)
 		renderedChildren = [c.render(childFrac) for c in self.children]
 
 		return mergeRenderedChildren(childFrac, renderedChildren)
 
-
 	def __str__(self):
 		return ".".join([str(c) for c in self.children])
+
+
 
 class MultNode:
 
@@ -126,16 +126,15 @@ class MultNode:
 		self.leaf = False
 		self.children = [self.child]
 
-
 	def render(self, frac):
 		childFrac = frac / self.multNum
 		renderedChild = self.child.render(childFrac)
 		childCopies = [copy.deepcopy(renderedChild) for i in range(self.multNum)]
 		return mergeRenderedChildren(childFrac, childCopies)
 
-
 	def __str__(self):
 		return str(self.child) + "*" + str(self.multNum)
+
 
 
 class CurlyBracketNode:
@@ -173,7 +172,6 @@ class CurlyBracketNode:
 				alignment[j].append( self.children[j].children[ self.alignmentInds[j] ] )
 				self.alignmentInds[j] = (self.alignmentInds[j]+1) % len(self.children[j].children)
 
-
 		#render grandchildren 
 		#however, grandchild expressions could be nested expressions (and thus stateful) themselves.
 		#	therefore, we need to "re-render" the grandchildren each time after alligning them
@@ -193,7 +191,6 @@ class CurlyBracketNode:
 			renderedChildren.append(mergeRenderedChildren(grandChildFrac, alignment[i]))
 
 		return flattenChildren(renderedChildren)
-
 
 	def __str__(self):
 		return "{"+".".join([str(c) for c in self.children])+"}"
