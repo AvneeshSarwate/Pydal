@@ -57,9 +57,10 @@ startPattern = {|msg, time, addr, recvPort|
 		{startDelay = patternList[ind][0] - loopFrac},
 		{startDelay = 1 - loopFrac}
 	);
+
+	//kick of playing
 	["START STEPS IN", startDelay].postln;
 	tempoClock.sched(startDelay, playStepGenerator.(msg[1]));
-	//kick of playing
 };
 OSCFunc(startPattern, "/pydalPlay");
 
@@ -112,8 +113,8 @@ OSCFunc(recieveBackupPattern, "/pydalSendUpdate");
 
 //msg[1] is ind of channel to stop
 stopPattern = {|msg, time, addr, recvPort|
-	if(channelPatternMap.includes(msg[1]), {channelPatternMap[msg[1]] = []});
-	"STOP PATTERN".postln;
+	if(channelPatternMap.keys.includes(msg[1]), {channelPatternMap[msg[1]] = []});
+	["STOP PATTERN", channelPatternMap.keys.includes(msg[1]), msg[1]].postln;
 };
 OSCFunc(stopPattern, "/pydalStop");
 
