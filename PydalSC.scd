@@ -48,7 +48,7 @@ startPattern = {|msg, time, addr, recvPort|
 
 	//save/increment ind
 	channelInd[msg[1]] = ind;
-
+	["START STEPS IN", patternList[ind][0] - loopFrac].postln;
 	tempoClock.sched(patternList[ind][0] - loopFrac, playStepGenerator.(msg[1]));
 	//kick of playing
 };
@@ -66,10 +66,10 @@ playStepGenerator = {|i|
 			var dur = step[0];
 
 			step[1].do({|samp| sendSample.(samp)});
-			step.postln;
+			["STEP", ind, step].postln;
 
 			//if 2nd to last step, send request for next pattern
-			if(ind == patList.size-2, {pythonOSCport.sendMsg("/pydalGetUpdate-"++i)});
+			if(ind == (patList.size-2), {pythonOSCport.sendMsg("/pydalGetUpdate-"++i)});
 
 			//if last step (or < 20 ms from end?), set backupPat to actual pattern
 			if(ind == (patList.size-1), {channelPatternMap[i] = chanBackupPatMap[i]});
@@ -79,7 +79,9 @@ playStepGenerator = {|i|
 
 			//return (d) - i.e. schedule next step on channel
 			retVal = dur;
+			["RETVAL1", retVal].postln;
 		});
+		["RETVAL2", retVal].postln;
 		retVal
 	};
 	playStep
@@ -91,6 +93,7 @@ playStepGenerator = {|i|
 recieveBackupPattern = {|msg, time, addr, recvPort|
 	//parse string and save it to backupmap
 	chanBackupPatMap[msg[1]] = timeListToDurationList.(patternRead.(msg[2]));
+	"GOT BACKUP".postln;
 };
 OSCFunc(recieveBackupPattern, "/pydalSendUpdate");
 
@@ -98,6 +101,7 @@ OSCFunc(recieveBackupPattern, "/pydalSendUpdate");
 //msg[1] is ind of channel to stop
 stopPattern = {|msg, time, addr, recvPort|
 	if(channelPatternMap.includes(msg[1]), {channelPatternMap[msg[1]] = []});
+	"STOP PATTERN".postln;
 };
 OSCFunc(stopPattern, "/pydalStop");
 

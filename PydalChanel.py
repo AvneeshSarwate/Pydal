@@ -76,7 +76,7 @@ class PydalChannel:
 	def _update(self, *args):
 		renderList = self.pydalPattern.render()
 		renderStr = ";".join(str(t[0]) + "-" + ",".join(t[1]) for t in renderList)
-		msg = OSC.OSCMessage
+		msg = OSC.OSCMessage()
 		msg.setAddress("/pydalSendUpdate")
 		msg.append(self.num)
 		msg.append(renderStr)
