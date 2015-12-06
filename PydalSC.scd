@@ -31,7 +31,7 @@ drumTypes["aud"] = 108;
 //msg[2] is the string pattern getting played
 startPattern = {|msg, time, addr, recvPort|
 	//parse string to pattern
-	var patternList, loopFrac, ind;
+	var patternList, loopFrac, ind, startDelay;
 	["PLAY START", msg[2]].postln;
 	patternList = patternRead.(msg[2].asString);
 
@@ -46,12 +46,19 @@ startPattern = {|msg, time, addr, recvPort|
 	});
 	ind = ind % patternList.size;
 
-	if(ind == (patternList.size-1), {pythonOSCport.sendMsg("/pydalGetUpdate-"++msg[1].asString)});
+	if(ind == (patternList.size-1), {
+		"START WITH BACKUP".postln;
+		pythonOSCport.sendMsg("/pydalGetUpdate-"++msg[1].asString)
+	});
 
 	//save/increment ind
 	channelInd[msg[1]] = ind;
-	["START STEPS IN", patternList[ind][0] - loopFrac].postln;
-	tempoClock.sched(patternList[ind][0] - loopFrac, playStepGenerator.(msg[1]));
+	if((patternList[ind][0] - loopFrac) > 0,
+		{startDelay = patternList[ind][0] - loopFrac},
+		{startDelay = 1 - loopFrac}
+	);
+	["START STEPS IN", startDelay].postln;
+	tempoClock.sched(startDelay, playStepGenerator.(msg[1]));
 	//kick of playing
 };
 OSCFunc(startPattern, "/pydalPlay");
