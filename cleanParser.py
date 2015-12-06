@@ -166,5 +166,3 @@ cases = [
 
 statefulCases = ["{a b, c d e, f g h i}"]
 
-for c in cases:
-	test(c)

@@ -1,12 +1,16 @@
 //tempoclock with beat set to 1 cycle length
-(
+(var midiOut, pythonOSCport, tempoClock, channelPatternMap, chanBackupPatMap, channelInd, drumTypes, startPattern, playStepGenerator, recieveBackupPattern, stopPattern, patternRead, timeListToDurationList, sendSample, midiChannel;
 
+MIDIClient.init;
 midiOut = MIDIOut.newByName("IAC Driver", "Bus 1");
 pythonOSCport = NetAddr("localhost", 34345);
 tempoClock = TempoClock(1);
 channelPatternMap = Dictionary();
 chanBackupPatMap = Dictionary();
 channelInd = Dictionary();
+
+//TODO - parametrize this
+midiChannel = 0;
 
 drumTypes = Dictionary();
 drumTypes["bd"] = 30;
@@ -27,18 +31,20 @@ drumTypes["aud"] = 108;
 //msg[2] is the string pattern getting played
 startPattern = {|msg, time, addr, recvPort|
 	//parse string to pattern
-	var patternList = patternRead.(msg[2]);
+	var patternList, loopFrac, ind;
+	["PLAY START", msg[2]].postln;
+	patternList = patternRead.(msg[2].asString);
 
 	//save pattern to map
 	channelPatternMap[msg[1]] = timeListToDurationList.(patternList);
 
 	//calculate what ind/time to start from
-	loopFrac = tempClock.beats % 1;
+	loopFrac = tempoClock.beats % 1;
 	ind = 0;
 	patternList.do({|p|
-		if(loopFrac > p[0], {ind+=1})
+		if(loopFrac > p[0], {ind = ind + 1})
 	});
-	ind+=1;
+	ind = ind % patternList.size;
 
 	//save/increment ind
 	channelInd[msg[1]] = ind;
@@ -46,24 +52,27 @@ startPattern = {|msg, time, addr, recvPort|
 	tempoClock.sched(patternList[ind][0] - loopFrac, playStepGenerator.(msg[1]));
 	//kick of playing
 };
+OSCFunc(startPattern, "/pydalPlay");
+
 
 playStepGenerator = {|i|
-	playStep = {
+	var playStep = {
 		//if list len == 0, exit
 		var retVal = nil;
-		if(channelPatternMap.get(i).size != 0, {
-			var ind = channelInd.get(i);
-			var patList = channelPatternMap.get(i)
+		if(channelPatternMap[i].size != 0, {
+			var ind = channelInd[i];
+			var patList = channelPatternMap[i];
 			var step = patList[ind];
 			var dur = step[0];
 
 			step[1].do({|samp| sendSample.(samp)});
+			step.postln;
 
 			//if 2nd to last step, send request for next pattern
 			if(ind == patList.size-2, {pythonOSCport.sendMsg("/pydalGetUpdate-"++i)});
 
 			//if last step (or < 20 ms from end?), set backupPat to actual pattern
-			if(ind == patList.size-1, {channelPatternMap[i] = chanBackupPatMap[i]});
+			if(ind == (patList.size-1), {channelPatternMap[i] = chanBackupPatMap[i]});
 
 			//update indexes appropriately
 			channelInd[i] = (ind+1)%patList.size;
@@ -77,20 +86,21 @@ playStepGenerator = {|i|
 };
 
 
-//generated as a closure via playStepGenerator.(i)where i is the channel ind
-
-
 //msg[1] is the channel being played on
 //msg[2] is the backup pattern
 recieveBackupPattern = {|msg, time, addr, recvPort|
 	//parse string and save it to backupmap
 	chanBackupPatMap[msg[1]] = timeListToDurationList.(patternRead.(msg[2]));
 };
+OSCFunc(recieveBackupPattern, "/pydalSendUpdate");
+
 
 //msg[1] is ind of channel to stop
 stopPattern = {|msg, time, addr, recvPort|
 	if(channelPatternMap.includes(msg[1]), {channelPatternMap[msg[1]] = []});
 };
+OSCFunc(stopPattern, "/pydalStop");
+
 
 patternRead = {|patternStr|
 	var patternList = List.new;
@@ -98,33 +108,31 @@ patternRead = {|patternStr|
 		var step = s.split($-);
 		var time = step[0].asFloat;
 		var sampSet = Set.newFrom(step[1].split($,));
-		step[0].postln;
-		step[1].postln;
 		patternList.add([time, sampSet]);
 	});
 	patternList
 };
 
 timeListToDurationList = {|oldList|
-	pList = List.new;
+	var pList = List.new;
 	(0..oldList.size-2).do({|i|
 		pList.add([oldList[i+1][0] - oldList[i][0], oldList[i][1]]);
 	});
 	pList.add([1 - oldList[oldList.size-1][0], oldList[oldList.size-1][1]]);
-	plist
+	pList
 };
 
 sendSample = {|drumStr|
-
+	var drumInd, drumType;
 	drumInd = drumStr.split($:)[1];
 	drumInd = if(drumInd.isNil, 0, {drumInd.asInteger});
 	drumType = drumTypes[drumStr.split($:)[0]].asInteger;
 
 	//todo - send cc map stuff if applicable
 	Task({
-		midiOut.noteOn(chanInd-1, drumType+drumInd); //maybe add velocity based on gain?
+		midiOut.noteOn(midiChannel, drumType+drumInd); //maybe add velocity based on gain?
 		0.001.wait;
-		midiOut.noteOff(chanInd-1, drumType+drumInd);
+		midiOut.noteOff(midiChannel, drumType+drumInd);
 	}).play;
 };
 
