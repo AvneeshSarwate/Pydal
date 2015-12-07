@@ -4,6 +4,8 @@
 MIDIClient.init;
 midiOut = MIDIOut.newByName("IAC Driver", "Bus 1");
 pythonOSCport = NetAddr("localhost", 34345);
+
+//TODO: implement tempoclock per channel (with synched beats)
 tempoClock = TempoClock(1);
 channelPatternMap = Dictionary();
 chanBackupPatMap = Dictionary();
@@ -37,7 +39,7 @@ startPattern = {|msg, time, addr, recvPort|
 
 	//save pattern to map
 	channelPatternMap[msg[1]] = timeListToDurationList.(patternList);
-
+	chanBackupPatMap[msg[1]] = [];
 	//calculate what ind/time to start from
 	loopFrac = tempoClock.beats % 1;
 	ind = 0;

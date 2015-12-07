@@ -1,7 +1,11 @@
-test if rendering is correct over nodes' state changes
+test more thoroughly if rendering is correct over nodes' state changes
 
-build out live playing backend
-- figure out timing strategy of how SC and python communicate
-  - how will stateful expression loop
-  - how will a newly "played" expression be synched up
-- wrap the components st they are easy to execute from REPL
+implement tempoClock per channel (with synched beats)
+
+select an implementation of functor from pydaltest.py (probably the first one)
+
+start writing transformation functions 
+
+build out and test “controller response” framework 
+
+clean up supercollider to use a Channel class
