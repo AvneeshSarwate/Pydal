@@ -7,33 +7,42 @@ ch1.play(read("sn bd bd"))
 
 
 # TODO: probably want this implementation 
-# To implement a functor, a user must override the 
-# initializeState and render methods 
+# - To implement a functor, a user must override the 
+# 	initializeState and computation methods 
 class Functor:
 
 	def __init__(self, *args):
-		self.args = args
+		self.savedArgs = args
 		self.initializeState()
 	
+	# - Defines the names of state variables and their
+	#	initial values 
 	def initializeState(self):
 		return
 
-	# A functor can be called repeatedly 
-	# to accumulate all needed arguments.
-	# Its arguments must be called in order.
+	# - A functor can be called repeatedly to accumulate all needed arguments.
+	# - Its arguments must be called in order.
 	# (todo: support explicit currying a la supercollider?)
 	def __call__(self, *args):
 		self.args += args
 
-	# Render returns a sample time series and  
-	# only references its own state and saved arguments.
-	# It may modify its own state variables.
-	# If an expression tree must be returned, it should be set here
-	def render(self):
+	# - This method uses computation() to render the final series
+	#	and expression tree	
+	def render(self, *args):
+		return self.computation(*(self.savedArgs+args))
+
+
+	# - This returns a sample time series and only references its
+	# 	arguments and the variables defined in intializeState().
+	# - It may modify its own state variables.
+	# - If an expression tree must be returned, it should be set here. 
+	# - NEVER CALL THIS EXPLICITLY - use render() instead 
+	def computation(self):
 		return
 
-	# If a functor makes changes to the expression tree
-	# this is the method that should be used to get it. 
+
+	# - If a functor makes changes to the expression tree
+	# 	this is the method that should be used to get it. 
 	def getExpressionTree():
 		return self.expressionTree
 
