@@ -6,7 +6,7 @@ midiOut = MIDIOut.newByName("IAC Driver", "Bus 1");
 pythonOSCport = NetAddr("localhost", 34345);
 
 //TODO: implement tempoclock per channel (with synched beats)
-masterTempoClock = TempoClock(1);
+masterTempoClock = TempoClock.new(1);
 channelPatternMap = Dictionary();
 chanBackupPatMap = Dictionary();
 channelInd = Dictionary();
@@ -45,16 +45,19 @@ startPattern = {|msg, time, addr, recvPort|
 	//create channel tempo clock if needed
 	if(tempoClockMap.keys.includes(msg[1]).not,
 		{
-			chanClock = TempoClock(masterTempoClock.beatDur);
+			chanClock = TempoClock.new(masterTempoClock.tempo, masterTempoClock.beats);
 			tempoClockMap[msg[1]] = chanClock;
-			b = masterTempoClock.beats;
-		"PRE TEST".postln;
-			chanClock.beats = b;
+			chanClock.beats = masterTempoClock.beats;
 		},
 		{chanClock = tempoClockMap[msg[1]]}
 	);
 
 	chanClock.clear;
+
+	tempoClockMap.values.do({|v| v.beats.postln;});
+
+	/*channelInd[msg[1]] = 0;
+	chanClock.sched(chanClock.timeToNextBeat, playStepGenerator.(msg[1]));*/
 
 	//calculate what ind/time to start from
 	loopFrac = chanClock.beats % 1;
@@ -94,14 +97,14 @@ playStepGenerator = {|i|
 			var dur = step[0];
 
 			step[1].do({|samp| sendSample.(samp)});
-			["STEP", ind, step].postln;
+			["STEP", i, ind, tempoClockMap[i].beats%1, step].postln;
 
 			//if 2nd to last step, send request for next pattern
 			if(ind == (patList.size-2), {pythonOSCport.sendMsg("/pydalGetUpdate-"++i)});
 
 			//if last step (or < 20 ms from end?), set backupPat to actual pattern
 			if(ind == (patList.size-1), {
-				"DID BACKUP".postln;
+				//"DID BACKUP".postln;
 				channelPatternMap[i] = chanBackupPatMap[i]
 			});
 
@@ -110,9 +113,9 @@ playStepGenerator = {|i|
 
 			//return (d) - i.e. schedule next step on channel
 			retVal = dur;
-			["RETVAL1", retVal].postln;
+			//["RETVAL1", retVal].postln;
 		});
-		["RETVAL2", retVal].postln;
+		//["RETVAL2", retVal].postln;
 		retVal
 	};
 	playStep
@@ -123,7 +126,7 @@ playStepGenerator = {|i|
 //msg[2] is the backup pattern
 recieveBackupPattern = {|msg, time, addr, recvPort|
 	//parse string and save it to backupmap
-	["GOT BACKUP", msg[2]].postln;
+	//["GOT BACKUP", msg[2]].postln;
 	chanBackupPatMap[msg[1]] = timeListToDurationList.(patternRead.(msg[2].asString));
 };
 OSCFunc(recieveBackupPattern, "/pydalSendUpdate");
@@ -180,9 +183,12 @@ d.includes(5);
 )
 
 (
-var ty;
-if(true, {ty = 5});
-ty.beats
+t = TempoClock(1);
+t.beats.postln;
+j = 5;
+(1..10000).do({|i| j = i*3});
+t.beats.postln;
+j
 )
 
 (

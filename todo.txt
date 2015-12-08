@@ -1,11 +1,13 @@
-test more thoroughly if rendering is correct over nodes' state changes
 
-implement tempoClock per channel (with synched beats)
-
-select an implementation of functor from pydaltest.py (probably the first one)
-
+TODO:
 start writing transformation functions 
 
 build out and test “controller response” framework 
 
 clean up supercollider to use a Channel class
+
+
+SHOULD DO (but seem to work for now):
+test more thoroughly if rendering is correct over nodes' state changes
+
+think through functor implementation once more
