@@ -1,15 +1,16 @@
 //tempoclock with beat set to 1 cycle length
-(var midiOut, pythonOSCport, tempoClock, channelPatternMap, chanBackupPatMap, channelInd, drumTypes, startPattern, playStepGenerator, recieveBackupPattern, stopPattern, patternRead, timeListToDurationList, sendSample, midiChannel;
+(var midiOut, pythonOSCport, channelPatternMap, chanBackupPatMap, channelInd, drumTypes, startPattern, playStepGenerator, recieveBackupPattern, stopPattern, patternRead, timeListToDurationList, sendSample, midiChannel, masterTempoClock, tempoClockMap;
 
 MIDIClient.init;
 midiOut = MIDIOut.newByName("IAC Driver", "Bus 1");
 pythonOSCport = NetAddr("localhost", 34345);
 
 //TODO: implement tempoclock per channel (with synched beats)
-tempoClock = TempoClock(1);
+masterTempoClock = TempoClock(1);
 channelPatternMap = Dictionary();
 chanBackupPatMap = Dictionary();
 channelInd = Dictionary();
+tempoClockMap = Dictionary();
 
 //TODO - parametrize this
 midiChannel = 0;
@@ -33,15 +34,30 @@ drumTypes["aud"] = 108;
 //msg[2] is the string pattern getting played
 startPattern = {|msg, time, addr, recvPort|
 	//parse string to pattern
-	var patternList, loopFrac, ind, startDelay;
+	var patternList, loopFrac, ind, startDelay, chanClock;
 	["PLAY START", msg[2]].postln;
 	patternList = patternRead.(msg[2].asString);
 
 	//save pattern to map
 	channelPatternMap[msg[1]] = timeListToDurationList.(patternList);
 	chanBackupPatMap[msg[1]] = [];
+
+	//create channel tempo clock if needed
+	if(tempoClockMap.keys.includes(msg[1]).not,
+		{
+			chanClock = TempoClock(masterTempoClock.beatDur);
+			tempoClockMap[msg[1]] = chanClock;
+			b = masterTempoClock.beats;
+		"PRE TEST".postln;
+			chanClock.beats = b;
+		},
+		{chanClock = tempoClockMap[msg[1]]}
+	);
+
+	chanClock.clear;
+
 	//calculate what ind/time to start from
-	loopFrac = tempoClock.beats % 1;
+	loopFrac = chanClock.beats % 1;
 	ind = 0;
 	patternList.do({|p|
 		if(loopFrac > p[0], {ind = ind + 1})
@@ -62,7 +78,7 @@ startPattern = {|msg, time, addr, recvPort|
 
 	//kick of playing
 	["START STEPS IN", startDelay].postln;
-	tempoClock.sched(startDelay, playStepGenerator.(msg[1]));
+	chanClock.sched(startDelay, playStepGenerator.(msg[1]));
 };
 OSCFunc(startPattern, "/pydalPlay");
 
@@ -163,6 +179,11 @@ d = Dictionary.new;
 d.includes(5);
 )
 
+(
+var ty;
+if(true, {ty = 5});
+ty.beats
+)
 
 (
 var patternSplit = {|patternStr|

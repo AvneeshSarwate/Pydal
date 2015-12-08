@@ -65,7 +65,7 @@ class PydalStringPattern:
 class PydalChannel:
 
 	def __init__(self, num, server, client):
-		self.num = 1
+		self.num = num
 		self.address = "pydalChannel-" + str(num)
 		self.pydalPattern = None
 		self.superColliderServer = server
@@ -97,5 +97,45 @@ class PydalChannel:
 		msg.setAddress("/pydalStop")
 		msg.append(self.num)
 		self.superColliderClient.send(msg)
+
+# TODO: probably want this implementation 
+# - To implement a functor, a user must override the 
+# 	initializeState and computation methods 
+class Functor:
+
+	def __init__(self, *args):
+		self.savedArgs = args
+		self.initializeState()
+	
+	# - Defines the names of state variables and their
+	#	initial values 
+	def initializeState(self):
+		return
+
+	# - A functor can be called repeatedly to accumulate all needed arguments.
+	# - Its arguments must be called in order.
+	# (todo: support explicit currying a la supercollider?)
+	def __call__(self, *args):
+		self.args += args
+
+	# - This method uses computation() to render the final series
+	#	and expression tree	
+	def render(self, *args):
+		return self.computation(*(self.savedArgs+args))
+
+
+	# - This returns a sample time series and only references its
+	# 	arguments and the variables defined in intializeState().
+	# - It may modify its own state variables.
+	# - If an expression tree must be returned, it should be set here. 
+	# - NEVER CALL THIS EXPLICITLY - use render() instead 
+	def computation(self):
+		return
+
+
+	# - If a functor makes changes to the expression tree
+	# 	this is the method that should be used to get it. 
+	def getExpressionTree():
+		return self.expressionTree
 
 
