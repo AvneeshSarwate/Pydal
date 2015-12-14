@@ -50,7 +50,7 @@ def isComma(s):
 	return s == ","
 #TODO: more conditions required to determine valid symbol 
 def isSymbol(s): 
-	return allIn(s, string.letters+string.digits+":") and s[0] != ":" and s[-1] != ":"
+	return allIn(s, string.letters+string.digits+":"+"~") and s[0] != ":" and s[-1] != ":"
 
 # through all the parse* functions
 # ind should always point to the next token to be read

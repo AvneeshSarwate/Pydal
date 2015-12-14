@@ -16,6 +16,7 @@ tempoClockMap = Dictionary();
 midiChannel = 0;
 
 drumTypes = Dictionary();
+drumTypes["~"] = 1;
 drumTypes["bd"] = 30;
 drumTypes["lt"] = 40;
 drumTypes["ht"] = 50;
@@ -153,8 +154,12 @@ patternRead = {|patternStr|
 
 timeListToDurationList = {|oldList|
 	var pList = List.new;
-	(0..oldList.size-2).do({|i|
-		pList.add([oldList[i+1][0] - oldList[i][0], oldList[i][1]]);
+	if(oldList.size > 1,
+		{
+			(0..oldList.size-2).do({|i|
+				pList.add([oldList[i+1][0] - oldList[i][0], oldList[i][1]]);
+			});
+
 	});
 	pList.add([1 - oldList[oldList.size-1][0], oldList[oldList.size-1][1]]);
 	pList
