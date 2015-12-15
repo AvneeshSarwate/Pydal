@@ -11,10 +11,11 @@ class Pydal:
 
 		self.superColliderServer = OSC.OSCServer(('127.0.0.1', 34345))
 		self.serverThread = threading.Thread(target=self.superColliderServer.serve_forever)
+		self.serverThread.daemon = False
 		self.serverThread.start()
 
 	def end(self):
-		self.serverThread.join(1)
+		self.superColliderServer.close()
 
 	def newChannel(self, num):
 		#send message to superCollider to make new handler for channel
