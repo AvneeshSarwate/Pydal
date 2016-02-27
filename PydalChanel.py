@@ -110,7 +110,7 @@ class Functor:
 	
 	# - Defines the names of state variables and their
 	#	initial values 
-	def initializeState(self):
+	def _initializeState(self):
 		return
 
 	# - A functor can be called repeatedly to accumulate all needed arguments.
@@ -130,7 +130,7 @@ class Functor:
 	# - It may modify its own state variables.
 	# - If an expression tree must be returned, it should be set here. 
 	# - NEVER CALL THIS EXPLICITLY - use render() instead 
-	def computation(self):
+	def _computation(self):
 		return
 
 

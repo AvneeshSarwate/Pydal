@@ -1,11 +1,11 @@
 #
-# <expression> ::= <symbol> [(<mult> <number>)] | <paren-block> [(<mult> <number>)] | <expression> [(<expression>)]...  
+# <expression>  ::= <symbol> [(<mult> <number>)] | <paren-block> [(<mult> <number>)] | <expression> [(<expression>)]...  
 # 
 # <paren_block> ::= "[" <expression>  ["," <expression>]... "]" | "{" <expression> ["," <expression>] "}" 
 # 
-# <mult> ::= "*" | "x"
+# <mult> 		::= "*" | "x"
 #
-# <symbol> ::= [a-zA-Z0-9][a-zA-Z0-9]*(:[0-9][0-9]*){0,1}
+# <symbol> 		::= [a-zA-Z0-9][a-zA-Z0-9]*(:[0-9][0-9]*){0,1}
 #
 # additional features - NOT SUPPORTED YET, even though "x" is in the parser
 # 	- "x": "new step repeat" - i.e a bx3 c -> a b b b c, whereas a b*3 c -> a [b b b] c
