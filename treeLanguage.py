@@ -18,11 +18,14 @@
 import re
 import itertools
 import string
+
+def parse(inputStr, debug=False):
+	return parseExpression(tokenize(inputStr), 0, 0, debug)[0].render()
  
 def main():
 	st = '\/ ^ ((^ <)*2 \/*2)*2 >'
 	print tokenize(st)
-	print parseExpression(tokenize(st), 0, 0, True)[0].render()
+	print parse(st, True)
 
 def tokenize(inputStr):
 	delimiters = ['\(', '\)', '\*']
@@ -155,6 +158,7 @@ class MultNode:
 
 	def __str__(self):
 		return str(self.child) + "*" + str(self.multNum)
+
 
 if __name__ == "__main__":
 	main()
