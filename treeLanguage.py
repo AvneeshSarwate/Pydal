@@ -20,9 +20,9 @@ import itertools
 import string
  
 def main():
-	st = '\/ ^ (< <)*2 >'
+	st = '\/ ^ ((^ <)*2 \/*2)*2 >'
 	print tokenize(st)
-	print str(parseExpression(tokenize(st), 0, 0, True)[0])
+	print parseExpression(tokenize(st), 0, 0, True)[0].render()
 
 def tokenize(inputStr):
 	delimiters = ['\(', '\)', '\*']
@@ -91,7 +91,7 @@ def parseSymbol(tokenList, ind, depth, debug = False):
 			print "symbol \t\t", depth, ind, tokenList[ind]
 	symbolNode = SymbolNode(tokenList[ind:ind+1])
 	if ind+1 < len(tokenList) and tokenList[ind+1] == "*":
-		return parseMult(tokenList, ind+1, symbolNode)
+		return parseMult(tokenList, ind+1, symbolNode, depth+1, debug)
 	else:
 		return SymbolNode(tokenList[ind:ind+1]), ind+1 
 
@@ -104,6 +104,9 @@ class ParenNode:
 		self.frac = frac
 		self.type = "Paren"
 
+	def render(self):
+		return " ".join([c.render() for c in self.children])
+
 	def __str__(self):
 		return "["+".".join([str(c) for c in self.children])+"]"
 
@@ -115,6 +118,9 @@ class SymbolNode:
 		self.leaf = True
 		self.type = "Symbol"
 
+	def render(self):
+		return self.children[0]
+
 	def __str__(self):
 		return self.children[0]
 
@@ -124,6 +130,9 @@ class ExpressionNode:
 		self.children = children
 		self.type = "Expression"
 		self.leaf = False
+
+	def render(self):
+		return " ".join([c.render() for c in self.children])
 
 	def __str__(self):
 		return ".".join([str(c) for c in self.children])
@@ -140,6 +149,9 @@ class MultNode:
 		self.type = "Mult"
 		self.leaf = False
 		self.children = [self.child]
+
+	def render(self):
+		return " ".join([c.render() for c in self.children]*self.multNum)
 
 	def __str__(self):
 		return str(self.child) + "*" + str(self.multNum)
