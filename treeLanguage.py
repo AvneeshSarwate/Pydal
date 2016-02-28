@@ -38,9 +38,10 @@ def tokenize(inputStr):
 # To get child/sibling indexing for free, rather than each "token" being
 # a string, have each "token" be a regex. For non-indexed tokens, the
 # string in this array would stay the same. But for indexed tokens, 
-# (s in {<, >, \/}), it would be the regex 's(:[0-9]+)?'
+# (s in {<, >, \/}), it would be the regex '(s(:[0-9]+)?)$'
 def isSymbol(s):
-	return s in ['\/', '^', '<', '>', '\/!', '<!', '>!']
+	symbolTypes = ['(\/(:[0-9]+)?)$', '\^', '(<(:[0-9]+)?)$', '(>(:[0-9]+)?)$', '\/!', '<!', '>!']
+
 
 def parseExpression(tokenList, ind, depth, debug = False):
 	node = ExpressionNode([])

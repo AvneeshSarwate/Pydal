@@ -19,29 +19,63 @@ class TreeBuilder:
 		self.funcMap['<!'] = self.newLeft
 		self.funcMap['>!'] = self.newRight
 
-	def moveDown(self, ind):
+	def moveDown(self, symbol):
+		ind = int(symbol.split(":")[1]) if ":" in symbol else 0
 		if len(self.currentNode.children) != 0:
 			self.siblingInd = ind%len(self.children)
 			self.currentNode = self.children[self.siblingInd]
 
-	def moveUp(self):
+	def moveUp(self, symbol):
 		if not self.currentNode.parent is None:
 			self.currentNode = self.currentNode.parent
 
-	def moveLeft(self, ind):
-		return
+	def moveLeft(self, symbol):
+		ind = int(symbol.split(":")[1]) if ":" in symbol else 0
+		self.siblingInd = (self.siblingInd + ind) % len(self.parent.children)
+		self.currentNode = self.parent.children[self.siblingInd]
 
-	def moveRight(self, ind):
-		return
+	def moveRight(self, symbol):
+		ind = int(symbol.split(":")[1]) if ":" in symbol else 0
+		self.siblingInd = (self.siblingInd - ind) % len(self.parent.children)
+		self.currentNode = self.parent.children[self.siblingInd]
 
-	def newDown(self):
-		return
+	def newDown(self, symbol):
+		newVal = self.transformationFunc(self.currentNode)
+		newNode = Node(newVal, self.currentNode)
+		self.currentNode.children.append(newNode)
+		self.newNode.treePosition = self.currentNode.treePosition + "-" + str(len(self.currentNode.children)-1)
+		self.siblingInd = len(self.currentNode.children) - 1
+		self.currentNode = newNode
 
-	def newLeft(self):
-		return
+		#TODO: - hanlde creating new siblings for tree root
 
-	def newRight(self):
-		return
+	def newLeft(self, symbol):
+		newVal = self.transformationFunc(self.currentNode)
+		newNode = Node(newVal, self.parent)
+		self.parent.children.insert(self.siblingInd+1, newNode)
+		self.newNode.treePosition = self.parent.treePosition + "-" + str(self.siblingInd+1)
+		#TODO: modify sibling ind of all subsequent silings
+		for c in self.parent.children[self.siblingInd+2:]:
+			newLastPosition = str(int(c.treePosition.split("-")[-1])+1)
+			positionSplit = c.treePosition.split("-")
+			positionSplit[-1] = newLastPosition
+			c.treePosition = "-".join(positionSplit)
+		self.currentNode = newNode
+		self.siblingInd += 1
+
+	def newRight(self, symbol):
+		newVal = self.transformationFunc(self.currentNode)
+		newNode = Node(newVal, self.parent)
+		self.parent.children.insert(self.siblingInd - 1, newNode)
+		self.newNode.treePosition = self.parent.treePosition + "-" + str(max(self.siblingInd - 1, 0))
+		#TODO: modify sibling ind of all subsequent silings
+		for c in self.parent.children[self.siblingInd+1:]:
+			newLastPosition = str(int(c.treePosition.split("-")[-1])+1)
+			positionSplit = c.treePosition.split("-")
+			positionSplit[-1] = newLastPosition
+			c.treePosition = "-".join(positionSplit)
+		self.currentNode = newNode
+
 
 
 
@@ -53,3 +87,4 @@ class Node:
 		self.children = []
 		self.value = value
 		self.parent = parent
+		self.treePosition = "0"
