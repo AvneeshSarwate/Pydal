@@ -36,7 +36,7 @@ def tokenize(inputStr):
 	return tokens
 
 def isSymbol(s):
-	return s in ['\/', '^', '<', '>', '\/!', '^!', '<!', '>!']
+	return s in ['\/', '^', '<', '>', '\/!', '<!', '>!']
 
 def parseExpression(tokenList, ind, depth, debug = False):
 	node = ExpressionNode([])
