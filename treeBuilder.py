@@ -1,5 +1,24 @@
 import treeLanguage as tl 
 
+
+def main():
+
+	inc = lambda a: a+1	
+	inc = Counter()
+	tree = TreeBuilder(0, inc)
+	tree.execute('\/! \/! >! >! <  < >!')
+	print [c.value for c in tree.root.children[0].children]
+
+
+class Counter:
+
+	def __init__(self):
+		self.count = 0
+
+	def __call__(self, arg):
+		self.count += 1
+		return self.count 
+
 class TreeBuilder:
 
 	# Given a "flattened" token list, when trying to find what function matches
@@ -29,33 +48,33 @@ class TreeBuilder:
 		if not self.currentNode.parent is None:
 			self.currentNode = self.currentNode.parent
 
-	def moveLeft(self, symbol):
-		ind = int(symbol.split(":")[1]) if ":" in symbol else 0
-		self.siblingInd = (self.siblingInd + ind) % len(self.parent.children)
-		self.currentNode = self.parent.children[self.siblingInd]
-
 	def moveRight(self, symbol):
-		ind = int(symbol.split(":")[1]) if ":" in symbol else 0
-		self.siblingInd = (self.siblingInd - ind) % len(self.parent.children)
-		self.currentNode = self.parent.children[self.siblingInd]
+		ind = int(symbol.split(":")[1]) if ":" in symbol else 1
+		self.siblingInd = (self.siblingInd + ind) % len(self.currentNode.parent.children)
+		self.currentNode = self.currentNode.parent.children[self.siblingInd]
+
+	def moveLeft(self, symbol):
+		ind = int(symbol.split(":")[1]) if ":" in symbol else 1
+		self.siblingInd = (self.siblingInd - ind) % len(self.currentNode.parent.children)
+		self.currentNode = self.currentNode.parent.children[self.siblingInd]
 
 	def newDown(self, symbol):
-		newVal = self.transformationFunc(self.currentNode)
+		newVal = self.transFunc(self.currentNode.value)
 		newNode = Node(newVal, self.currentNode)
 		self.currentNode.children.append(newNode)
-		self.newNode.treePosition = self.currentNode.treePosition + "-" + str(len(self.currentNode.children)-1)
+		newNode.treePosition = self.currentNode.treePosition + "-" + str(len(self.currentNode.children)-1)
 		self.siblingInd = len(self.currentNode.children) - 1
 		self.currentNode = newNode
 
 		#TODO: - hanlde creating new siblings for tree root
 
-	def newLeft(self, symbol):
-		newVal = self.transformationFunc(self.currentNode)
-		newNode = Node(newVal, self.parent)
-		self.parent.children.insert(self.siblingInd+1, newNode)
-		self.newNode.treePosition = self.parent.treePosition + "-" + str(self.siblingInd+1)
+	def newRight(self, symbol):
+		newVal = self.transFunc(self.currentNode.value)
+		newNode = Node(newVal, self.currentNode.parent)
+		self.currentNode.parent.children.insert(self.siblingInd+1, newNode)
+		newNode.treePosition = self.currentNode.parent.treePosition + "-" + str(self.siblingInd+1)
 		#TODO: modify sibling ind of all subsequent silings
-		for c in self.parent.children[self.siblingInd+2:]:
+		for c in self.currentNode.parent.children[self.siblingInd+2:]:
 			newLastPosition = str(int(c.treePosition.split("-")[-1])+1)
 			positionSplit = c.treePosition.split("-")
 			positionSplit[-1] = newLastPosition
@@ -63,23 +82,24 @@ class TreeBuilder:
 		self.currentNode = newNode
 		self.siblingInd += 1
 
-	def newRight(self, symbol):
-		newVal = self.transformationFunc(self.currentNode)
-		newNode = Node(newVal, self.parent)
-		self.parent.children.insert(self.siblingInd - 1, newNode)
-		self.newNode.treePosition = self.parent.treePosition + "-" + str(max(self.siblingInd - 1, 0))
+	def newLeft(self, symbol):
+		newVal = self.transFunc(self.currentNode.value)
+		newNode = Node(newVal, self.currentNode.parent)
+		self.currentNode.parent.children.insert(self.siblingInd - 1, newNode)
+		newNode.treePosition = self.currentNode.parent.treePosition + "-" + str(max(self.siblingInd - 1, 0))
 		#TODO: modify sibling ind of all subsequent silings
-		for c in self.parent.children[self.siblingInd+1:]:
+		for c in self.currentNode.parent.children[self.siblingInd+1:]:
 			newLastPosition = str(int(c.treePosition.split("-")[-1])+1)
 			positionSplit = c.treePosition.split("-")
 			positionSplit[-1] = newLastPosition
 			c.treePosition = "-".join(positionSplit)
 		self.currentNode = newNode
 
-
-
-
-
+	def execute(self, treeString):
+		actions = tl.parse(treeString).split(" ")
+		for a in actions:
+			actionType = a.split(":")[0]
+			self.funcMap[actionType](a)
 
 class Node:
 
@@ -88,3 +108,10 @@ class Node:
 		self.value = value
 		self.parent = parent
 		self.treePosition = "0"
+
+
+
+
+if __name__ == "__main__":
+	main()
+

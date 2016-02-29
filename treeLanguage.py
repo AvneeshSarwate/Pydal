@@ -39,8 +39,10 @@ def tokenize(inputStr):
 # a string, have each "token" be a regex. For non-indexed tokens, the
 # string in this array would stay the same. But for indexed tokens, 
 # (s in {<, >, \/}), it would be the regex '(s(:[0-9]+)?)$'
-def isSymbol(s):
-	symbolTypes = ['(\/(:[0-9]+)?)$', '\^', '(<(:[0-9]+)?)$', '(>(:[0-9]+)?)$', '\/!', '<!', '>!']
+def isSymbol(sym):
+	symbolTypes = ['(\\\/(:[0-9]+)?)$', '\^', '(<(:[0-9]+)?)$', '(>(:[0-9]+)?)$', '\\\/!', '<!', '>!']
+	return True in [re.match(s, sym) and True for s in symbolTypes]
+
 
 
 def parseExpression(tokenList, ind, depth, debug = False):
