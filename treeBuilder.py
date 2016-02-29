@@ -44,6 +44,7 @@ class TreeBuilder:
 			self.siblingInd = ind%len(self.children)
 			self.currentNode = self.children[self.siblingInd]
 
+	#todo: include indexes for moving up? 
 	def moveUp(self, symbol):
 		if not self.currentNode.parent is None:
 			self.currentNode = self.currentNode.parent
@@ -100,6 +101,10 @@ class TreeBuilder:
 		for a in actions:
 			actionType = a.split(":")[0]
 			self.funcMap[actionType](a)
+		#todo: return the sequence of values corresponding to the sequence of nodes
+		#traversed by the commands. should there be a special character (eg the @ in '\/@'')
+		#that indicates whether you want the result of that command included in the 
+		#values list returned?
 
 class Node:
 
