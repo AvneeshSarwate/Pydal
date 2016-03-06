@@ -53,6 +53,9 @@ class TransitionGraph:
 		self.linksByTransition = {} # map from transitionString -> set of links
 		self.graphString = graphString
 		self.tokens = self.parseGraphStringIntoTokens()
+		self.generateGraphFromTokens(self.tokens)
+
+		#todo - instantiate OSC server
 
 	def parseGraphStringIntoTokens(self):
 		gStr = self.graphString
@@ -85,6 +88,7 @@ class TransitionGraph:
 				if not transitionStr in self.linksByTransition:
 					linksByTransition[transitionStr] = Set()
 				linksByTransition[transitionStr].add(Link(lineTokens[0], transitionStr, lineTokens[2]))	
+				#todo: add osc hanlder (self.transitionHanlder)
 				i += 2
 
 
