@@ -52,16 +52,41 @@ class TransitionGraph:
 		self.states = Set() #list of current active state strings
 		self.linksByTransition = {} # map from transitionString -> set of links
 		self.graphString = graphString
-		self.parseGraphString()
+		self.tokens = self.parseGraphStringIntoTokens()
 
-	def parseGraphString(self):
+	def parseGraphStringIntoTokens(self):
 		gStr = self.graphString
 		strLines = filter(lambda a: (not a.isspace()) and len(a) != 0, gStr.split("\n"))
-		for line in strLines:
-			tokens = filter(lambda a: len(a) != 0, line.split())
+		tokens = []
 
-			# split line into states and arrows
-			# validate state, arrow, state [arrow, state]* pattern
+		arrowRE = "^--\([0-9A-Za-z]+\)-->$"
+		symbolRE = "^([0-9A-Za-z]+)$"
+
+		for line in strLines:
+			lineTokens = filter(lambda a: len(a) != 0, line.split())
+			i = 0
+			m = lambda reStr, argStr: re.match(reStr, argStr)
+			while i < len(lineTokens):
+				if not (m(symbolRE, lineTokens[i+0]) and m(arrowRE, lineTokens[i+1]) and m(symbolRE, lineTokens[i+2])):
+					raise StopIteration("improperly formatted graph string")
+				i += 2
+
+			tokens.append(lineTokens)
+
+
+		return tokens
+
+
+	def generateGraphFromTokens(self, tokens):
+		for lineTokens in tokens:
+			i = 0
+			while i < len(lineTokens):
+				transitionStr = lineTokens[1][3:-4]
+				if not transitionStr in self.linksByTransition:
+					linksByTransition[transitionStr] = Set()
+				linksByTransition[transitionStr].add(Link(lineTokens[0], transitionStr, lineTokens[2]))	
+				i += 2
+
 
 
 	def transitionHandler(self, addr, tags, stuff, source):
