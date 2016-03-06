@@ -8,6 +8,18 @@ def main():
 	tree = TreeBuilder(0, inc)
 	tree.execute('\/! \/! >! >! <  < >!')
 	print [c.value for c in tree.root.children[0].children]
+	print toDotFile("test1", tree.root)
+
+def toDotFile(fileName, tree):
+		el = []
+		def addEdges(node, edgeList):
+			for c in node.children:
+				edgeList.append(str(node.value) + "->" + str(c.value))
+				addEdges(c, edgeList)
+		addEdges(tree, el)
+		return "digraph " + fileName + " { \n" + "\n".join(el) + "\n}"
+
+
 
 
 class Counter:
