@@ -2,24 +2,6 @@ import re
 import itertools
 
 
-def factorial(n):
-	v = 1
-	for i in range(1, n+1):
-		v *= i
-	return v
-
-#print factorial(9), factorial(10), factorial(5)
-
-
-def milPerm(n, symbols):
-	k = 1
-	while factorial(k) < n:
-		k +=1
-	print k-1
-
-#print milPerm(1000000, ['0', '1', '2', '3','4', '5', '6','7', '8', '9'])
-
-
 gStr = """
 f1 --(s1)--> f2 --(pad1)--> f4
 
@@ -27,17 +9,23 @@ f2 --(seq1)--> f3
 
 """
 
-def parseGraphString(gStr):
-	strLines = filter(lambda a: (not a.isspace()) and len(a) != 0, gStr.split("\n"))
-	for line in strLines:
-		tokens = filter(lambda a: len(a) != 0, line.split())
+def funcStateTest(f, *args):
+	print "function", f, "with args", args
 
-		# split line into states and arrows
-		# validate state, arrow, state [arrow, state]* pattern
+def main():
+	gStr = """
+	f1 --(s1)--> f2 --(pad1)--> f4
 
-print parseGraphString(gStr)
+	f2 --(seq1)--> f3
 
+	"""
 
+	funcMap = {}
+	funcMap["f1"] = lambda *args: funcStateTest("f1", args)
+	funcMap["f2"] = lambda *args: funcStateTest("f2", args)
+	funcMap["f3"] = lambda *args: funcStateTest("f3", args)
+
+	tg = TransitionGraph(funcMap, gStr)
 
 # general idea - a "state" consists of a functor that 
 # is called when that state is transitioned to, its arguments being those that
@@ -45,14 +33,17 @@ print parseGraphString(gStr)
 
 # a "transition" is an OSC message with certain arguments
 
+
+
 class TransitionGraph:
 
-	def __init__(self, stateKeyToFunctor, graphString):
+	def __init__(self, stateKeyToFunctor, graphString, initialStates = None):
 		self.stateKeyToFunctor = stateKeyToFunctor # map from stateString -> functor
-		self.states = Set() #list of current active state strings
 		self.linksByTransition = {} # map from transitionString -> set of links
 		self.graphString = graphString
 		self.tokens = self.parseGraphStringIntoTokens()
+		#list of current active state strings (first state in graph string by default)
+		self.states = Set(self.tokens[0][0]) if initialStates is None else initialStates 
 		self.generateGraphFromTokens(self.tokens)
 
 		#todo - instantiate OSC server
@@ -92,7 +83,6 @@ class TransitionGraph:
 				i += 2
 
 
-
 	def transitionHandler(self, addr, tags, stuff, source):
 		linksFromOldStates = filter(lambda link: link.fromState in states, linksByTransition[addr])
 		newStates = map(lambda link:  link.toState, linksFromOldStates)
@@ -102,9 +92,19 @@ class TransitionGraph:
 
 		self.states = newStates
 
+	def toGraphVisString():
+		dotFileLines = []
+		for link in self.linksByTransition.values():
+			dotFileLines.append(link.fromState + " --> " + "("+link.transition+")" + "-->" + link.toState)
+
+		return "digraph G {\n" + "\n".join(dotFileLines) + "\n}"
+
 class Link:
 
 	def __init__(fromStateString, transString, toStateString):
 		self.fromState = fromStateString
 		self.transition = transString
 		self.toState = toStateString
+
+if __name__ == "__main__":
+	main()
