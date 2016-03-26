@@ -8,6 +8,9 @@ def main():
 	tree = TreeBuilder(0, inc)
 	tree.execute('\/! \/! >! >! <  < >!')
 	print [c.value for c in tree.root.children[0].children]
+	levels = tree.nodesByDepth()
+	for l in levels:
+		print l 
 	print toDotFile("test1", tree.root)
 
 def toDotFile(fileName, tree):
@@ -117,6 +120,17 @@ class TreeBuilder:
 		#traversed by the commands. should there be a special character (eg the @ in '\/@'')
 		#that indicates whether you want the result of that command included in the 
 		#values list returned?
+
+	def nodesByDepth(self, returnValues=True):
+		nodes = [[self.root]]
+		vals = [[self.root.value]]
+		children = [child for node in nodes[-1] for child in node.children]
+		while len(children) != 0:
+			nodes.append(children)
+			vals.append(map(lambda n: n.value, children))
+			children = [child for node in nodes[-1] for child in node.children]
+
+		return vals if returnValues else nodes
 
 class Node:
 
