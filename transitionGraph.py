@@ -88,12 +88,12 @@ class TransitionGraph:
 
 	def transitionHandler(self, addr, tags, stuff, source):
 		linksFromOldStates = filter(lambda link: link.fromState in self.states, self.linksByTransition[addr])
-		newStates = map(lambda link:  link.toState, linksFromOldStates)
+		newStates = set(map(lambda link:  link.toState, linksFromOldStates))
 		
 		for state in newStates:
 			self.stateKeyToFunctor[state](stuff)
 
-		self.states = set(newStates)
+		self.states = newStates
 
 	def toGraphVisString(self):
 		dotFileLines = []
