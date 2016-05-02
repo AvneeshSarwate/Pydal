@@ -10,6 +10,7 @@
 
 import itertools
 import copy
+import random
 
 
 #other node types needed: SquareBracket, 
@@ -105,7 +106,7 @@ class ExpressionNode:
 	def render(self, frac):
 		childFrac = frac / len(self.children)
 		renderedChildren = [c.render(childFrac) for c in self.children]
-
+		print "exrpession render"
 		return mergeRenderedChildren(childFrac, renderedChildren)
 
 	def __str__(self):
@@ -128,8 +129,7 @@ class MultNode:
 
 	def render(self, frac):
 		childFrac = frac / self.multNum
-		renderedChild = self.child.render(childFrac)
-		childCopies = [copy.deepcopy(renderedChild) for i in range(self.multNum)]
+		childCopies = [self.child.render(childFrac) for i in range(self.multNum)]
 		return mergeRenderedChildren(childFrac, childCopies)
 
 	def __str__(self):
@@ -197,4 +197,37 @@ class CurlyBracketNode:
 
 	#how many times this node must be evaluated before it returns the same expression
 	#def getPeriod():  
+
+class AngleBracketNode:
+
+	def __init__(self, children, frac=1):
+		self.children = children
+		self.leaf = False
+		self.frac = frac
+		self.type = "AngleBracket"
+
+	def render(self, frac):
+		randInd = random.randInt(0, len(self.children)-1)
+		return self.children[randInd].render(self.frac)
+
+	def __str__(self):
+		return "<"+".".join([str(c) for c in self.children])+">"
+
+class ParenBracketNode:
+
+	def __init__(self, children, frac=1):
+		self.children = children
+		self.leaf = False
+		self.frac = frac
+		self.type = "ParenBracket"
+
+		self.seqInd = 0
+
+	def render(self, frac):
+		self.seqInd = (self.seqInd+1) % len(self.children)
+		print self.seqInd
+		return self.children[self.seqInd].render(self.frac)
+
+	def __str__(self):
+		return "("+".".join([str(c) for c in self.children])+")"
 
