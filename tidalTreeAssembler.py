@@ -50,6 +50,7 @@ def mergeRenderedChildren(childFrac, children):
 	for i in range(len(children)):
 		timeShift = lambda timePitchTuple: (timePitchTuple[0]+(i*childFrac), timePitchTuple[1])
 		merge += map(timeShift, children[i])
+	#print "merge", childFrac, merge 
 	return merge
 
 
@@ -66,15 +67,7 @@ class SquareBracketNode:
 		self.type = "SquareBracket"
 
 	def render(self, frac):
-		#render grandchildren
-		renderedGrandchildren = [[gc.render(frac / len(c.children)) for gc in c.children] for c in self.children]
-
-		#render expression ("assemble" grandchildren)
-		renderedChildren = []
-		for i in range(len(renderedGrandchildren)):
-			grandChildFrac = frac / len(renderedGrandchildren[i])
-			renderedChildren.append(mergeRenderedChildren(grandChildFrac, renderedGrandchildren[i]))
-
+		renderedChildren = [c.render(self.frac) for c in self.children]
 		return flattenChildren(renderedChildren)
 
 	def __str__(self):
@@ -104,9 +97,10 @@ class ExpressionNode:
 		self.leaf = False
 
 	def render(self, frac):
-		childFrac = frac / len(self.children)
+		#todo: why is the 1.0 needed? frac should always be a decimal 
+		#because 1.0 is passed in at the root of the AST
+		childFrac = 1.0 * frac / len(self.children)
 		renderedChildren = [c.render(childFrac) for c in self.children]
-		print "exrpession render"
 		return mergeRenderedChildren(childFrac, renderedChildren)
 
 	def __str__(self):
@@ -207,8 +201,9 @@ class AngleBracketNode:
 		self.type = "AngleBracket"
 
 	def render(self, frac):
-		randInd = random.randInt(0, len(self.children)-1)
-		return self.children[randInd].render(self.frac)
+		randInd = random.randint(0, len(self.children)-1)
+		child = self.children[randInd].render(self.frac)
+		return child
 
 	def __str__(self):
 		return "<"+".".join([str(c) for c in self.children])+">"
@@ -224,9 +219,9 @@ class ParenBracketNode:
 		self.seqInd = 0
 
 	def render(self, frac):
+		child = self.children[self.seqInd].render(self.frac)
 		self.seqInd = (self.seqInd+1) % len(self.children)
-		print self.seqInd
-		return self.children[self.seqInd].render(self.frac)
+		return child
 
 	def __str__(self):
 		return "("+".".join([str(c) for c in self.children])+")"
