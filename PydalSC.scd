@@ -1,16 +1,17 @@
 //tempoclock with beat set to 1 cycle length
-(var midiOut, pythonOSCport, channelPatternMap, chanBackupPatMap, channelInd, drumTypes, startPattern, playStepGenerator, recieveBackupPattern, stopPattern, patternRead, timeListToDurationList, sendSample, midiChannel, masterTempoClock, tempoClockMap;
+(var midiOut, pythonOSCport, channelPatternMap, chanBackupPatMap, channelInd, drumTypes, startPattern, playStepGenerator, recieveBackupPattern, stopPattern, patternRead, timeListToDurationList, sendSample, midiChannel, masterTempoClock, tempoClockMap, loopStartFunctions, masterClockBeat, masterClockTempoHandler;
 
 MIDIClient.init;
 midiOut = MIDIOut.newByName("IAC Driver", "Bus 1");
 pythonOSCport = NetAddr("localhost", 34345);
 
 //TODO: implement tempoclock per channel (with synched beats)
-masterTempoClock = TempoClock.new(1);
+//masterTempoClock = TempoClock.new(1);
 channelPatternMap = Dictionary();
 chanBackupPatMap = Dictionary();
 channelInd = Dictionary();
 tempoClockMap = Dictionary();
+loopStartFunctions = Dictionary();
 
 //TODO - parametrize this
 midiChannel = 0;
@@ -60,29 +61,9 @@ startPattern = {|msg, time, addr, recvPort|
 	/*channelInd[msg[1]] = 0;
 	chanClock.sched(chanClock.timeToNextBeat, playStepGenerator.(msg[1]));*/
 
-	//calculate what ind/time to start from
-	loopFrac = chanClock.beats % 1;
-	ind = 0;
-	patternList.do({|p|
-		if(loopFrac > p[0], {ind = ind + 1})
-	});
-	ind = ind % patternList.size;
+	channelInd[msg[1]] = 0;
 
-	if(ind == (patternList.size-1), {
-		"START WITH BACKUP".postln;
-		pythonOSCport.sendMsg("/pydalGetUpdate-"++msg[1].asString)
-	});
-
-	//save/increment ind
-	channelInd[msg[1]] = ind;
-	if((patternList[ind][0] - loopFrac) > 0,
-		{startDelay = patternList[ind][0] - loopFrac},
-		{startDelay = 1 - loopFrac}
-	);
-
-	//kick of playing
-	["START STEPS IN", startDelay].postln;
-	chanClock.sched(startDelay, playStepGenerator.(msg[1]));
+	loopStartFunctions[msg[1]] = {chanClock.sched(0, playStepGenerator.(msg[1]))};
 };
 OSCFunc(startPattern, "/pydalPlay");
 
@@ -139,6 +120,34 @@ stopPattern = {|msg, time, addr, recvPort|
 	["STOP PATTERN", channelPatternMap.keys.includes(msg[1]), msg[1]].postln;
 };
 OSCFunc(stopPattern, "/pydalStop");
+
+f = {|msg, time, addr, recvPort|
+	//msg[1] is the new BEAT DURATION (not tempo)
+	masterTempoClock = TempoClock.new(1/msg[1]);
+	t = masterTempoClock;
+	masterTempoClock.beats = 0;
+};
+OSCFunc(f, "/masterClockBeat").oneShot;
+
+//msg[1] is the new BEAT DURATION (not tempo)
+masterClockTempoHandler = {|msg, time, addr, recvPort|
+	//(0..3).do({|i| metronomeClocks[i].tempo = 1/msg[1].asFloat})
+	masterTempoClock.tempo =  1/msg[1].asFloat;
+	tempoClockMap.values.do({|clock| clock.tempo = 1/msg[1].asFloat});
+};
+OSCFunc(masterClockTempoHandler, "/masterClockTempo");
+
+//msg[1] is the new BEAT DURATION (not tempo)
+masterClockBeat = {|msg, time, addr, recvPort|
+	loopStartFunctions.keys.do({|key|
+		if(loopStartFunctions[key] != nil, {
+			loopStartFunctions[key].();
+			loopStartFunctions[key] = nil;
+		})
+	});
+	"PYDAL BEAT".postln;
+};
+OSCFunc(masterClockBeat, "/masterClockBeat");
 
 
 patternRead = {|patternStr|
