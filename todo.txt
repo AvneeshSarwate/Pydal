@@ -11,3 +11,14 @@ SHOULD DO (but seem to work for now):
 test more thoroughly if rendering is correct over nodes' state changes
 
 think through functor implementation once more
+
+
+
+integrating "sequence micro-lang" for arranging Pydal patterns:
+have a function 
+	arrange(string, [patterns...])
+		string - the "sequence" string with only symbols lowercase a-z
+		patterns - the patterns to be arranged
+the first pattern is denoted by "a", 2nd by "b" and so on.
+the function will validate whether you're using improper symbol names
+this removes the need to pass in a symbol->pattern mapping 
