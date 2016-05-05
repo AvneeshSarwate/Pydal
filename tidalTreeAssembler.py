@@ -67,7 +67,8 @@ class SquareBracketNode:
 		self.type = "SquareBracket"
 
 	def render(self, frac):
-		renderedChildren = [c.render(self.frac) for c in self.children]
+		childFrac = 1.0 * frac / len(self.children)
+		renderedChildren = [c.render(childFrac) for c in self.children]
 		return flattenChildren(renderedChildren)
 
 	def __str__(self):
