@@ -11,6 +11,9 @@ def main():
 
 	f2 --(seq1)--> f3
 
+	f3 --(r)--> f1
+
+	f4 --(r)--> f1
 	"""
 
 	funcMap = {}
