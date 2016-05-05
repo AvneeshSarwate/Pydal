@@ -1,8 +1,9 @@
 //tempoclock with beat set to 1 cycle length
 (var midiOut, pythonOSCport, channelPatternMap, chanBackupPatMap, channelInd, drumTypes, startPattern, playStepGenerator, recieveBackupPattern, stopPattern, patternRead, timeListToDurationList, sendSample, midiChannel, masterTempoClock, tempoClockMap, loopStartFunctions, masterClockBeat, masterClockTempoHandler;
 
-MIDIClient.init;
-midiOut = MIDIOut.newByName("IAC Driver", "Bus 1");
+//MIDIClient.init; TODO: move this into masterTempoClock.scd
+midiOut = MIDIOut.newByName("IAC Driver", "Bus 3");
+midiOut.latency = 0;
 pythonOSCport = NetAddr("localhost", 34345);
 
 //TODO: implement tempoclock per channel (with synched beats)
@@ -123,9 +124,8 @@ OSCFunc(stopPattern, "/pydalStop");
 
 f = {|msg, time, addr, recvPort|
 	//msg[1] is the new BEAT DURATION (not tempo)
-	masterTempoClock = TempoClock.new(1/msg[1]);
+	masterTempoClock = TempoClock.new(1/msg[1], 0);
 	t = masterTempoClock;
-	masterTempoClock.beats = 0;
 };
 OSCFunc(f, "/masterClockBeat").oneShot;
 
@@ -141,11 +141,12 @@ OSCFunc(masterClockTempoHandler, "/masterClockTempo");
 masterClockBeat = {|msg, time, addr, recvPort|
 	loopStartFunctions.keys.do({|key|
 		if(loopStartFunctions[key] != nil, {
+			["START", masterTempoClock.beats].postln;
 			loopStartFunctions[key].();
 			loopStartFunctions[key] = nil;
 		})
 	});
-	"PYDAL BEAT".postln;
+	["PYDAL BEAT", masterTempoClock.beats].postln;
 };
 OSCFunc(masterClockBeat, "/masterClockBeat");
 
