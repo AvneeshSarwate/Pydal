@@ -15,10 +15,14 @@ think through functor implementation once more
 
 
 integrating "sequence micro-lang" for arranging Pydal patterns:
-have a function 
+have a pydal function 
 	arrange(string, [patterns...])
 		string - the "sequence" string with only symbols lowercase a-z
 		patterns - the patterns to be arranged
 the first pattern is denoted by "a", 2nd by "b" and so on.
 the function will validate whether you're using improper symbol names
 this removes the need to pass in a symbol->pattern mapping 
+like any pydal function, it will produce a single long timeseries on render()
+it will re-render all of its child patterns when render() is called on it
+watch out for handling the rest "~" symbol 
+	- strip it out when post-processing the "sequencing lang" symbolic output?
