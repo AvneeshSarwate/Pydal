@@ -202,7 +202,7 @@ class AngleBracketNode:
 
 	def render(self, frac):
 		randInd = random.randint(0, len(self.children)-1)
-		child = self.children[randInd].render(self.frac)
+		child = self.children[randInd].render(frac)
 		return child
 
 	def __str__(self):
@@ -219,7 +219,7 @@ class ParenBracketNode:
 		self.seqInd = 0
 
 	def render(self, frac):
-		child = self.children[self.seqInd].render(self.frac)
+		child = self.children[self.seqInd].render(frac)
 		self.seqInd = (self.seqInd+1) % len(self.children)
 		return child
 

@@ -82,7 +82,7 @@ playStepGenerator = {|i|
 			step[1].do({|samp| sendSample.(samp)});
 			["STEP", i, ind, tempoClockMap[i].beats%1, step].postln;
 
-			//if 2nd to last step, send request for next pattern
+			//if 2nd to last step, send request for next pattern TODO: won't work for patterns len 1?
 			if(ind == (patList.size-2), {pythonOSCport.sendMsg("/pydalGetUpdate-"++i)});
 
 			//if last step (or < 20 ms from end?), set backupPat to actual pattern
