@@ -23,8 +23,9 @@ class FH:
 
 		self.superColliderServer.addMsgHandler("/algRequest", self.handleAlgRequest)
 		self.superColliderServer.addMsgHandler("/saveLoop", self.saveNewLaunchpadLoop)
+		self.superColliderServer.addMsgHandler("/algRequestUpdate", self.updateChannel)
 
-		channels = {} #key - int, val - (transFunc, rootMel)
+		self.channels = {} #key - int, val - (transFunc, rootMel)
 
 	#stuff = [chanInd, bankNum, root, scale, loopString] 
 	def handleAlgRequest(self, addr, tags, stuff, source):
@@ -71,13 +72,26 @@ class FH:
 		self.superColliderServer.close()
 
 	def startChannel(self, chanInd, transFunc, rootMel):
-		self.stopChannel(chanInd)
+		#self.stopChannel(chanInd)
 		self.channels[chanInd] = (transFunc, rootMel)
 		msg = OSC.OSCMessage()
 		msg.setAddress("/algStart")
 		msg.append(chanInd)
-		msg.append(self.hitListToString(rootMel))
+		msg.append(self.hitListToString(rootMel, 'fillerStuff', 'fillerStuff'))
 		self.superColliderClient.send(msg)
+
+	#stuff[0] is channelInd
+	def updateChannel(self, addr, tags, stuff, source):
+		chanInd = stuff[0]
+		transFunc = self.channels[chanInd][0]
+		rootMel = self.channels[chanInd][1]
+		newMel = transFunc(rootMel)
+		msg = OSC.OSCMessage()
+		msg.setAddress("/algRecieveUpdate")
+		msg.append(chanInd)
+		msg.append(self.hitListToString(newMel, 'fillerStuff', 'fillerStuff'))
+		self.superColliderClient.send(msg)
+
 
 	def stopChannel(self, chanInd):
 		msg = OSC.OSCMessage()
