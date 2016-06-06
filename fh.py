@@ -24,6 +24,8 @@ class FH:
 		self.superColliderServer.addMsgHandler("/algRequest", self.handleAlgRequest)
 		self.superColliderServer.addMsgHandler("/saveLoop", self.saveNewLaunchpadLoop)
 
+		channels = {} #key - int, val - (transFunc, rootMel)
+
 	#stuff = [chanInd, bankNum, root, scale, loopString] 
 	def handleAlgRequest(self, addr, tags, stuff, source):
 		msg = OSC.OSCMessage()
@@ -67,6 +69,21 @@ class FH:
 
 	def end(self):
 		self.superColliderServer.close()
+
+	def startChannel(self, chanInd, transFunc, rootMel):
+		self.stopChannel(chanInd)
+		self.channels[chanInd] = (transFunc, rootMel)
+		msg = OSC.OSCMessage()
+		msg.setAddress("/algStart")
+		msg.append(chanInd)
+		msg.append(self.hitListToString(rootMel))
+		self.superColliderClient.send(msg)
+
+	def stopChannel(self, chanInd):
+		msg = OSC.OSCMessage()
+		msg.setAddress("/algStop")
+		msg.append(chanInd)
+		self.superColliderClient.send(msg)
 
 
 def oneHitShift(hitList):
