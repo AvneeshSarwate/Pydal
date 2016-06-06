@@ -109,6 +109,61 @@ def oneHitShift(hitList):
 	h2.insert(i2, hit)
 	return h2
 
+def notesByBeat(noteList):
+	byBeat = [[] for i in range(int(noteList[-1][0]))
+	for n in noteList:
+		byBeat[int(n[0])].append(n)
+	return byBeat
+
+def flattenByBeat(byBeat):
+	return [note for beat in byBeat for note in beat]
+
+#converts to a list of (timeStamp, midiNote, velocity, channel, duration)
+#TODO: fix assumtion that we start with note on, and that
+#there is strict alternation of note on/off per midiNote
+def hitListToNoteList(hitList):
+	noteToStartStop = {}
+	timeSoFar = 0
+	for h in hitList[:len(hitList-1)]:
+		timeSoFar += h[0]
+		if h[1] not in noteToStartStop:
+			noteToStartStop[h[1]] = [(timeSoFar,  h[2], h[3], h[4])] #time, velocity, midiChan, on/off
+		else:
+			noteToStartStop[h[1]].add((timeSoFar, h[2], h[3], h[4]))
+
+
+	noteList = []
+	for midiNote in noteToStartStop:
+		startStop = noteToStartStop[midiNote]
+		for i in range(0, len(startStop), 2):
+			#time, midiNote, onVelocity, midiChan, duration
+			noteList.append((startStop[i][0], midiNote, startStop[i][1], startStop[i][2], startStop[i+1][0]-startStop[i][0]))
+
+	noteList.sort()
+	return noteList
+
+def noteListToHitList(noteList):
+	intermediateHitList = []
+	for n in noteList:
+		intermediateHitList.append((n[0], n[1], n[2], n[3], 'on'))
+		intermediateHitList.append((n[0]+n[4], n[1], n[2], n[3], 'off'))
+
+	intermediateHitList.sort()
+	
+	for i in range(len(intermediateHitList-1), 0, -1):
+		intermediateHitList[i][0] -= intermediateHitList[i-1][0]
+
+	timeAfterLastHit = int(intermediateHitList[-1][0])+1 - intermediateHitList[-1][0]
+	intermediateHitList.append((timeAfterLastHit, 0, 0, 0, 'timeAfterLastHit'))
+
+	return intermediateHitList
+
+
+
+
+
+
+
 # hitString = '19 0.015517354926804,36,90,3,on-0.069313140281711,36,0,3,off-0.40111655031738,36,88,3,on-0.13826123650379,36,0,3,off-0.30373582635919,36,86,3,on-0.068988503365478,36,0,3,off-0.37323516937636,36,94,3,on-0.16584420671271,36,0,3,off-0.37435709074858,41,102,3,on-0.22119814726626,41,0,3,off-0.52463878235438,41,99,3,on-0.17918737393996,41,0,3,off-0.58129390059232,41,97,3,on-0.17996301558244,41,0,3,off-0.3181157736951,36,108,3,on-0.25061781998902,36,0,3,off-0.8401201725943,36,97,3,on-0.29228857541083,36,0,3,off-0.75886568925363,41,99,3,on-0.2358261358357,41,0,3,off-0.7734233730412,41,111,3,on-0.27621152805202,41,0,3,off-0.65788063380083,0,0,0,timeAfterLastHit 14'
 # hitString = '19 0.0155173549268,36,90,3,on-0.0693131402817,36,0,3,off-0.401116550317,36,88,3,on-0.138261236504,36,0,3,off-0.303735826359,36,86,3,on-0.0689885033655,36,0,3,off-0.373235169376,36,94,3,on-0.165844206713,36,0,3,off-0.374357090749,41,102,3,on-0.221198147266,41,0,3,off-0.524638782354,41,99,3,on-0.17918737394,41,0,3,off-0.581293900592,41,97,3,on-0.179963015582,41,0,3,off-0.318115773695,36,108,3,on-0.250617819989,36,0,3,off-0.840120172594,36,97,3,on-0.292288575411,36,0,3,off-0.758865689254,41,99,3,on-0.235826135836,41,0,3,off-0.773423373041,41,111,3,on-0.276211528052,41,0,3,off-0.657880633801,0,0,0,timeAfterLastHit 14'
 
