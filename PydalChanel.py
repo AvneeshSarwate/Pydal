@@ -32,8 +32,10 @@ class Pydal:
 
 
 
-def read(rawStr):
-	return parser.parse(rawStr)
+def read(rawStr, frac = 1.0):
+	node = parser.parse(rawStr)
+	node.frac = float(frac)
+	return node
 	#return PydalStringPattern(rawStr)
 
 pydalInstance = Pydal()
@@ -64,10 +66,15 @@ class PydalFuncPattern:
 		return
 
 
-# class Sequence:
+class Sequence:
 
-# 	def __init__(self, seqString, *args):
-# 		return
+	def __init__(self, seqString, *args):
+
+		stripSymbols = lambda beats : map(lambda beat : list(beat[1])[0], beats)
+
+	def render(self):
+		return
+
 
 
 class PydalStringPattern:

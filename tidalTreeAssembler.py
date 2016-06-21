@@ -69,9 +69,10 @@ class PydalNode:
 		
 	def render(self, frac=None):
 
-		
-		
-		childFracs = map(lambda node: node.frac, self.children)
+		scale = 1.0 if frac is None else frac/self.frac
+		self.frac = self.frac if frac is None else frac
+
+		childFracs = map(lambda node: node.frac*scale, self.children)
 		childFracs.insert(0, 0)
 		accumulatedShift = 0
 		merge = []
@@ -100,8 +101,8 @@ class SquareBracketNode(PydalNode):
 		self.frac = frac
 		self.type = "SquareBracket"
 
-	def render(self, frac=1.0):
-		self.frac = frac
+	def render(self, frac=None):
+		self.frac = frac = self.frac if frac is None else frac
 		renderedChildren = [c.render(frac) for c in self.children]
 		return flattenChildren(renderedChildren)
 
@@ -118,8 +119,8 @@ class SymbolNode(PydalNode):
 		self.leaf = True
 		self.type = "Symbol"
 
-	def render(self, frac=1.0):
-		self.frac = frac
+	def render(self, frac=None):
+		self.frac = frac = self.frac if frac is None else frac
 		return [(0, set(self.children))]
 
 	def __str__(self):
@@ -128,13 +129,13 @@ class SymbolNode(PydalNode):
 class ExpressionNode(PydalNode):
 
 	def __init__(self, children, frac = 1):
-		self.frac = 1
+		self.frac = frac
 		self.children = children
 		self.type = "Expression"
 		self.leaf = False
 
-	def render(self, frac=1.0):
-		self.frac = frac
+	def render(self, frac=None):
+		self.frac = frac = self.frac if frac is None else frac
 		#todo: why is the 1.0 needed? frac should always be a decimal 
 		#because 1.0 is passed in at the root of the AST
 		childFrac = 1.0 * frac / len(self.children)
@@ -159,8 +160,8 @@ class MultNode(PydalNode):
 		self.leaf = False
 		self.children = [self.child]
 
-	def render(self, frac=1.0):
-		self.frac = frac
+	def render(self, frac=None):
+		self.frac = frac = self.frac if frac is None else frac
 		childFrac = frac / self.multNum
 		childCopies = [self.child.render(childFrac) for i in range(self.multNum)]
 		return mergeRenderedChildren(childFrac, childCopies)
@@ -188,8 +189,8 @@ class CurlyBracketNode(PydalNode):
 	#length wrt the number of terms in the "parent" expression. 
 	#frac thus represents the fraction of the total loop time that
 	#this sub expression takes [0, 1]
-	def render(self, frac=1.0):
-		self.frac = frac
+	def render(self, frac=None):
+		self.frac = frac = self.frac if frac is None else frac
 
 		if self.alignmentInds is None:
 			self.alignmentInds = [0] * len(self.children)
@@ -243,8 +244,8 @@ class AngleBracketNode(PydalNode):
 		self.frac = frac
 		self.type = "AngleBracket"
 
-	def render(self, frac=1.0):
-		self.frac = frac
+	def render(self, frac=None):
+		self.frac = frac = self.frac if frac is None else frac
 		randInd = random.randint(0, len(self.children)-1)
 		child = self.children[randInd].render(frac)
 		return child
@@ -264,8 +265,8 @@ class ParenBracketNode(PydalNode):
 
 		self.seqInd = 0
 
-	def render(self, frac=1.0):
-		self.frac = frac
+	def render(self, frac=None):
+		self.frac = frac = self.frac if frac is None else frac
 		child = self.children[self.seqInd].render(frac)
 		self.seqInd = (self.seqInd+1) % len(self.children)
 		return child
