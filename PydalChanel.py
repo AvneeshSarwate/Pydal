@@ -21,12 +21,25 @@ class Pydal:
 		#send message to superCollider to make new handler for channel
 		return PydalChannel(num, self.superColliderServer, self.superColliderClient)
 
+	#num is the BPM
+	def setTempo(self, num):
+		msg = OSC.OSCMessage()
+		msg.setAddress("/uploadTempo")
+		msg.append(60.0/num)
+		self.superColliderClient.send(msg)
+
+
+
 
 
 def read(rawStr):
-	return PydalStringPattern(rawStr)
+	return parser.parse(rawStr)
+	#return PydalStringPattern(rawStr)
 
 pydalInstance = Pydal()
+
+def tempo(num):
+	pydalInstance.setTempo(num)
 
 def newChannel(num):
 	return pydalInstance.newChannel(num)
@@ -49,6 +62,13 @@ class PydalFuncPattern:
 	def render(self):
 		#apply func list to pattern
 		return
+
+
+# class Sequence:
+
+# 	def __init__(self, seqString, *args):
+# 		return
+
 
 class PydalStringPattern:
 

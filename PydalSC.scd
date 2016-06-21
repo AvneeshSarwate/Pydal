@@ -146,7 +146,7 @@ masterClockBeat = {|msg, time, addr, recvPort|
 			loopStartFunctions[key] = nil;
 		})
 	});
-	["PYDAL BEAT", masterTempoClock.beats].postln;
+	//["PYDAL BEAT", masterTempoClock.beats].postln;
 };
 OSCFunc(masterClockBeat, "/masterClockBeat");
 
@@ -171,7 +171,7 @@ timeListToDurationList = {|oldList|
 			});
 
 	});
-	pList.add([1 - oldList[oldList.size-1][0], oldList[oldList.size-1][1]]);
+	pList.add([oldList[oldList.size-1][0].ceil - oldList[oldList.size-1][0], oldList[oldList.size-1][1]]);
 	pList
 };
 

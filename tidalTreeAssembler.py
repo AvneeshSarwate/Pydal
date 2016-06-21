@@ -54,11 +54,45 @@ def mergeRenderedChildren(childFrac, children):
 	return merge
 
 
+
+#node.frac is the length (in beats) of a chunk returned from a call to "render"
+#TODO: make sure the above is actually true in all the code 
+
+class PydalNode:
+	def __init__(self, children):
+		self.children = children
+		self.frac = sum(map(lambda c : c.frac, children))
+
+
+	def __add__(self, b):
+		return PydalNode([self, b]) #TODO: make sure we REALLY want this to be dependent on child instances
+		
+	def render(self, frac=None):
+
+		
+		
+		childFracs = map(lambda node: node.frac, self.children)
+		childFracs.insert(0, 0)
+		accumulatedShift = 0
+		merge = []
+
+		for i in range(len(childFracs)-1):
+			accumulatedShift += childFracs[i]
+			#print i, accumulatedShift
+			timeShift = lambda timePitchTuple: (timePitchTuple[0]+accumulatedShift, timePitchTuple[1])
+
+			#because 0 is inserted into child fracs, use childFracs[i+1] 
+			#so each child is rendered with its actual frac value
+			merge += map(timeShift, self.children[i].render(childFracs[i+1]))
+
+		return merge
+	
+
 #render for SquareBracket:
 #	render children
 #	scale children to same total length
 #	combine children 
-class SquareBracketNode:
+class SquareBracketNode(PydalNode):
 
 	def __init__(self, children, frac = 1):
 		self.children = children
@@ -66,7 +100,8 @@ class SquareBracketNode:
 		self.frac = frac
 		self.type = "SquareBracket"
 
-	def render(self, frac):
+	def render(self, frac=1.0):
+		self.frac = frac
 		renderedChildren = [c.render(frac) for c in self.children]
 		return flattenChildren(renderedChildren)
 
@@ -75,7 +110,7 @@ class SquareBracketNode:
 
 
 
-class SymbolNode:
+class SymbolNode(PydalNode):
 
 	def __init__(self, children, frac = 1):
 		self.children = children
@@ -83,20 +118,23 @@ class SymbolNode:
 		self.leaf = True
 		self.type = "Symbol"
 
-	def render(self, frac):
+	def render(self, frac=1.0):
+		self.frac = frac
 		return [(0, set(self.children))]
 
 	def __str__(self):
 		return self.children[0]
 
-class ExpressionNode:
+class ExpressionNode(PydalNode):
 
-	def __init__(self, children):
+	def __init__(self, children, frac = 1):
+		self.frac = 1
 		self.children = children
 		self.type = "Expression"
 		self.leaf = False
 
-	def render(self, frac):
+	def render(self, frac=1.0):
+		self.frac = frac
 		#todo: why is the 1.0 needed? frac should always be a decimal 
 		#because 1.0 is passed in at the root of the AST
 		childFrac = 1.0 * frac / len(self.children)
@@ -108,7 +146,7 @@ class ExpressionNode:
 
 
 
-class MultNode:
+class MultNode(PydalNode):
 
 	#child is either a SymbolNode or a *BracketNode
 	#multNum is an integer 
@@ -121,7 +159,8 @@ class MultNode:
 		self.leaf = False
 		self.children = [self.child]
 
-	def render(self, frac):
+	def render(self, frac=1.0):
+		self.frac = frac
 		childFrac = frac / self.multNum
 		childCopies = [self.child.render(childFrac) for i in range(self.multNum)]
 		return mergeRenderedChildren(childFrac, childCopies)
@@ -131,7 +170,7 @@ class MultNode:
 
 
 
-class CurlyBracketNode:
+class CurlyBracketNode(PydalNode):
 
 	def __init__(self, children, frac = 1):
 		self.children = children
@@ -149,7 +188,9 @@ class CurlyBracketNode:
 	#length wrt the number of terms in the "parent" expression. 
 	#frac thus represents the fraction of the total loop time that
 	#this sub expression takes [0, 1]
-	def render(self, frac):
+	def render(self, frac=1.0):
+		self.frac = frac
+
 		if self.alignmentInds is None:
 			self.alignmentInds = [0] * len(self.children)
 
@@ -192,7 +233,9 @@ class CurlyBracketNode:
 	#how many times this node must be evaluated before it returns the same expression
 	#def getPeriod():  
 
-class AngleBracketNode:
+
+
+class AngleBracketNode(PydalNode):
 
 	def __init__(self, children, frac=1):
 		self.children = children
@@ -200,7 +243,8 @@ class AngleBracketNode:
 		self.frac = frac
 		self.type = "AngleBracket"
 
-	def render(self, frac):
+	def render(self, frac=1.0):
+		self.frac = frac
 		randInd = random.randint(0, len(self.children)-1)
 		child = self.children[randInd].render(frac)
 		return child
@@ -208,7 +252,9 @@ class AngleBracketNode:
 	def __str__(self):
 		return "<"+".".join([str(c) for c in self.children])+">"
 
-class ParenBracketNode:
+
+
+class ParenBracketNode(PydalNode):
 
 	def __init__(self, children, frac=1):
 		self.children = children
@@ -218,7 +264,8 @@ class ParenBracketNode:
 
 		self.seqInd = 0
 
-	def render(self, frac):
+	def render(self, frac=1.0):
+		self.frac = frac
 		child = self.children[self.seqInd].render(frac)
 		self.seqInd = (self.seqInd+1) % len(self.children)
 		return child
