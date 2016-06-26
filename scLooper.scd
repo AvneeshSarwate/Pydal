@@ -1,8 +1,8 @@
 (
-var noteToInd, noteToXY, isPadNote, buffers, recSynths, playSynths, recordOnTimes, loopDurTimes, recordMode, noteOnFunc, noteOffFunc, f1, f2, loopClocks, break, record_BUTTON, quneoOut, padIndToRed, padIndToGreen, record_LIGHT, tempoClock, metronomeSynched, isPlaying, metronomeSync_BUTTON, isSynched, isRecording, startPlaying, stopPlaying, startRecording, stopRecording, masterClockTempoHandler;
+var noteToInd, noteToXY, isPadNote, buffers, recSynths, playSynths, recordOnTimes, loopDurTimes, recordMode, noteOnFunc, noteOffFunc, f1, f2, loopClocks, break, record_BUTTON, quneoOut, padIndToRed, padIndToGreen, record_LIGHT, tempoClock, metronomeSynched, isPlaying, metronomeSync_BUTTON, isSynched, isRecording, startPlaying, stopPlaying, startRecording, stopRecording, masterClockTempoHandler, metronomeFunc;
 
-MIDIClient.init;
-MIDIIn.connectAll;
+/*MIDIClient.init;
+MIDIIn.connectAll;*/
 
 quneoOut = MIDIOut.newByName("QUNEO", "QUNEO");
 quneoOut.latency = 0;
@@ -114,7 +114,7 @@ stopPlaying = {|padInd|
 	quneoOut.noteOff(0, padIndToRed[padInd], 127);
 	["PLAY STOP", padInd].postln;
 	isPlaying[padInd] = false;
-}
+};
 
 /*
 noteOn
@@ -149,9 +149,8 @@ noteOnFunc = {|vel, note, chan, port|
 		);
 	});
 
-	if(note == record_BUTTON, {
-		recordMode = recordMode.not;
-	});
+	if(note == record_BUTTON, {recordMode = recordMode.not});
+	if(note == metronomeSync_BUTTON, {isSynched = isSynched.not});
 };
 MIDIFunc.noteOn(noteOnFunc, nil, nil, 2017846184);
 
