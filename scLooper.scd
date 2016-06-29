@@ -12,6 +12,7 @@ mini = MIDIClient.sources.select({|elem| (elem.name == "Launchpad Mini")
 /*
 TODO -
 continue to tweak latency
+   tweak "input latency" from POD by setting buffer playback startpoint x ms after initial recording startpoint
 fix recordOnTimes usage - what tempoClock to use? (default vs "tempoClock" var)
 things to set via python api
    set number of "count in" beats
