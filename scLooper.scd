@@ -1,5 +1,5 @@
 (
-var noteToInd, noteToXY, isPadNote, buffers, recSynths, playSynths, recordOnTimes, loopDurTimes, recordMode, noteOnFunc, noteOffFunc, f1, f2, loopClocks, break, record_BUTTON, miniOut, padIndToRed, padIndToGreen, record_LIGHT, tempoClock, metronomeSynched, isPlaying, metronomeSync_BUTTON, isSynched, isRecording, startPlaying, stopPlaying, startRecording, stopRecording, masterClockTempoHandler, metronomeFunc, syncFlash, red_LIGHT, green_LIGHT, amber_LIGHT, mini, used;
+var noteToInd, noteToXY, isPadNote, buffers, recSynths, playSynths, recordOnTimes, loopDurTimes, recordMode, noteOnFunc, noteOffFunc, f1, f2, loopClocks, break, record_BUTTON, miniOut, padIndToRed, padIndToGreen, record_LIGHT, tempoClock, metronomeSynched, isPlaying, metronomeSync_BUTTON, isSynched, isRecording, startPlaying, stopPlaying, startRecording, stopRecording, masterClockTempoHandler, metronomeFunc, syncFlash, red_LIGHT, green_LIGHT, amber_LIGHT, mini, used, abletonLatency;
 
 /*MIDIClient.init;
 MIDIIn.connectAll;*/
@@ -9,7 +9,14 @@ miniOut.latency = 0;
 
 mini = MIDIClient.sources.select({|elem| (elem.name == "Launchpad Mini")
 	&& (elem.device == "Launchpad Mini")})[0];
-
+/*
+TODO -
+continue to tweak latency
+fix recordOnTimes usage - what tempoClock to use? (default vs "tempoClock" var)
+things to set via python api
+   set number of "count in" beats
+   start/end points of loop (referenced by beat)
+*/
 //quneo control variables
 noteToInd = {|x|
 	var row = x / 16;
@@ -26,11 +33,12 @@ green_LIGHT = 48;
 red_LIGHT = 3;
 amber_LIGHT = 51;
 
+abletonLatency = 3.0 * 0.0354; //seconds
 
 Routine.run {
 
-	// s.options.inDevice =
-	s.options.outDevice = "Soundflower (64ch)";
+	s.options.inDevice = "POD HD400";
+	//s.options.outDevice = "Soundflower (64ch)";
 
 	s.bootSync;
 
@@ -50,7 +58,7 @@ Routine.run {
 	s.sync;
 
 	//create - buffs, recBufSynths, playBufSynths with newPause
-	buffers = Array.fill(64, {Buffer.alloc(s, s.sampleRate * 10.0, 2)});
+	buffers = Array.fill(64, {Buffer.alloc(s, s.sampleRate * 30.0, 2)});
 	recSynths = Array.fill(64, {|i| Synth.newPaused(\recBuf, [\bufnum, buffers[i]])});
 	playSynths = Array.fill(64, {|i| Synth.newPaused(\playBuf, [\out, 0, \bufnum, buffers[i]])});
 };
@@ -128,7 +136,7 @@ startPlaying = {|padInd, note|
 		{"FIRS TEMO CLOCK RESET".postln;
 			f1.(playSynths[padInd], loopClocks[padInd], loopDurTimes[padInd], padInd)});
 	if(used[padInd], {miniOut.noteOn(0, note, green_LIGHT)});
-	["PLAY START", padInd].postln;
+	["PLAY START", padInd, tempoClock.beats].postln;
 	isPlaying[padInd] = true;
 };
 
@@ -175,7 +183,10 @@ noteOnFunc = {|vel, note, chan, port|
 				if(frozenRecordMode && isRecording[padInd].not, {funcToExecute = {startRecording.(padInd, note)}});
 				if(frozenRecordMode.not && isPlaying[padInd], {funcToExecute = {stopPlaying.(padInd, note)}});
 				if(frozenRecordMode.not && isPlaying[padInd].not, {funcToExecute = {startPlaying.(padInd, note)}});
-				tempoClock.sched(tempoClock.timeToNextBeat, funcToExecute);
+				tempoClock.sched(tempoClock.timeToNextBeat - (abletonLatency*tempoClock.tempo), funcToExecute);
+				["LATENCY COMPENSATED", tempoClock.timeToNextBeat,
+					tempoClock.timeToNextBeat - (abletonLatency*tempoClock.tempo),
+					tempoClock.beats].postln;
 			},
 			{
 				if(frozenRecordMode,
@@ -219,5 +230,16 @@ noteOffFunc = {|vel, note, chan, port|
 
 MIDIFunc.noteOff(noteOffFunc, nil, nil, mini.uid);
 
+)
+
+
+
+(
+t = TempoClock(1);
+t.tempo = 50;
+t.tempo
+
+
 
 )
+
