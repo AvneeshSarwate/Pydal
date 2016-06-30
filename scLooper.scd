@@ -35,11 +35,11 @@ red_LIGHT = 3;
 amber_LIGHT = 51;
 
 abletonLatency = 4.0 * 0.0354; //seconds
-l = abletonLatency;
-i = 0; //skipforward into buffer to counteract input latency
+l =  abletonLatency;
+i = 0;  //skipforward into buffer to counteract input latency
 
-c = 4; //number of count in metronome hits
-e = 4; //preset number of beats to record for
+c = 4;  //number of count in metronome hits
+e = 4;  //preset number of beats to record for
 
 Routine.run {
 
@@ -261,9 +261,9 @@ MIDIFunc.noteOff(noteOffFunc, nil, nil, mini.uid);
 )
 
 
-c = 4
-e = 8
-l = 4 * 0.0354
+ c = 4
+ e = 8
+ l = 4 * 0.0354
 
 
 (
