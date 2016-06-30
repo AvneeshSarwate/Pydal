@@ -34,12 +34,17 @@ green_LIGHT = 48;
 red_LIGHT = 3;
 amber_LIGHT = 51;
 
-abletonLatency = 3.0 * 0.0354; //seconds
+abletonLatency = 4.0 * 0.0354; //seconds
+l = abletonLatency;
+i = 0; //skipforward into buffer to counteract input latency
+
+c = 4; //number of count in metronome hits
+e = 4; //preset number of beats to record for
 
 Routine.run {
 
 	s.options.inDevice = "POD HD400";
-	//s.options.outDevice = "Soundflower (64ch)";
+	s.options.outDevice = "Soundflower (64ch)";
 
 	s.bootSync;
 
@@ -177,17 +182,39 @@ noteOnFunc = {|vel, note, chan, port|
 	if(isPadNote.(note), {
 		var padInd = noteToInd.(note);
 		var frozenRecordMode = recordMode;
+		var recordStartClick = false;
+		var adjustTime = 0;
+		var leadIn = 0;
 		if(isSynched,
 			{
-				var funcToExecute;
+				var funcToExecute, eventTime;
 				if(frozenRecordMode && isRecording[padInd], {funcToExecute = {stopRecording.(padInd, note)}});
-				if(frozenRecordMode && isRecording[padInd].not, {funcToExecute = {startRecording.(padInd, note)}});
-				if(frozenRecordMode.not && isPlaying[padInd], {funcToExecute = {stopPlaying.(padInd, note)}});
-				if(frozenRecordMode.not && isPlaying[padInd].not, {funcToExecute = {startPlaying.(padInd, note)}});
-				tempoClock.sched(tempoClock.timeToNextBeat - (abletonLatency*tempoClock.tempo), funcToExecute);
+				if(frozenRecordMode && isRecording[padInd].not, {
+					funcToExecute = {startRecording.(padInd, note)};
+					adjustTime = c;
+					recordStartClick = true;
+				});
+				if(frozenRecordMode.not && isPlaying[padInd], {
+					funcToExecute = {stopPlaying.(padInd, note)};
+					adjustTime = 0 - (l*tempoClock.tempo);
+				});
+				if(frozenRecordMode.not && isPlaying[padInd].not, {
+					funcToExecute = {startPlaying.(padInd, note)};
+					adjustTime = 0 - (l*tempoClock.tempo);
+				});
+
+				eventTime = tempoClock.timeToNextBeat + adjustTime;
+				tempoClock.sched(eventTime, funcToExecute);
+
 				["LATENCY COMPENSATED", tempoClock.timeToNextBeat,
-					tempoClock.timeToNextBeat - (abletonLatency*tempoClock.tempo),
+					tempoClock.timeToNextBeat - (l*tempoClock.tempo),
 					tempoClock.beats].postln;
+				["SHOULD BE TRUE", (e > 0) && recordStartClick, e].postln;
+
+				if((e > 0) && recordStartClick, {"LATE STOP SCHED".postln; tempoClock.sched(eventTime+e, {
+					"LATE STOP".postln;
+					stopRecording.(padInd, note)
+				})});
 			},
 			{
 				if(frozenRecordMode,
@@ -233,6 +260,10 @@ MIDIFunc.noteOff(noteOffFunc, nil, nil, mini.uid);
 
 )
 
+
+c = 4
+e = 8
+l = 4 * 0.0354
 
 
 (
