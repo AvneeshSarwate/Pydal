@@ -113,9 +113,13 @@ class TreeBuilder:
 
 	def execute(self, treeString):
 		actions = tl.parse(treeString).split(" ")
+		traversedVariants = []
 		for a in actions:
-			actionType = a.split(":")[0]
+			actionType = a.split(":")[0].strip('@')
 			self.funcMap[actionType](a)
+			if "@" not in a:
+				traversedVariants.append(self.currentNode.value)
+		return traversedVariants
 		#todo: return the sequence of values corresponding to the sequence of nodes
 		#traversed by the commands. should there be a special character (eg the @ in '\/@'')
 		#that indicates whether you want the result of that command included in the 

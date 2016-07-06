@@ -173,6 +173,23 @@ def noteListToHitList(noteList):
 	return intermediateHitList
 
 
+
+
+#TODO - figure out higher level organization of melody manipulation module
+# 1. need a standard format to work with, make it a class (noteList as standard format?)
+#	- notelist manipulation can result in hitlsits that aren't creatable when playing with hands,
+#	  make sure this won't result in any hanging notes or weird length loops
+
+# functions:
+# splitAtBeats - splits a notelist into a list of segments starting at the indicies given (ending at the next largest index)
+#	- can be combined well with "a c b b <a c, b c>" style sequencing
+# 
+# 
+# 
+
+
+
+
 def beatShuffle(hitList, start=None, end=None):
 	#TODO - handle timeAfterLastBeat properly when shuffle includes last beat
 	beatList = notesByBeat(hitListToNoteList(hitList))
@@ -196,7 +213,7 @@ def randTranspose(hitList, root, scale, down=3, up=3, start=None, end=None, beat
 	scaleNotes = scaleNotesCalc(root-36, scale, 50)
 	if beatIndexed:
 		beatList = notesByBeat(noteList)
-		s = 0 if (start is None or start >= len(beatList)) else start
+		s = 0 if (start is None or start in range(len(beatList))) else start
 		e = len(beatList) if (end is None or end >= len(beatList) or end < s) else end
 		beatList = notesByBeat(noteList)
 		for b in beatList[s:e]:
@@ -214,6 +231,24 @@ def randTranspose(hitList, root, scale, down=3, up=3, start=None, end=None, beat
 
 	return noteListToHitList(noteList)
 
+def randBeatMove(hitList):
+	beatList = notesByBeat(hitListToNoteList(hitList))
+	i = random.randint(0, len(beatList))
+	k = random.choice(list(set(range(len(beatList))) - set([i])))
+	if i > k:
+		beatList.insert(k, beatList.pop(i))
+	else :
+		beatList.insert(k-1, beatList.pop(i))
+	return beatList
+
+
+def treeFunc(hitList, root, scale, p=0.3):
+	if random.uniform(0, 1) > p :
+		i = random.randint(0, len(hitList))
+		j = random.randint(0, len(hitList))
+		return randTranspose(hitList, root, scale, start=min(i, j), end=max(i, j), beatIndexed=False)
+	else:
+		return randBeatMove(hitList)
 
 
 #TODO: print the strings of a few different buffers as test cases 
