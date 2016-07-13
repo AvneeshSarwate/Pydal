@@ -2,6 +2,7 @@ import OSC
 import cleanParser as parser
 import copy
 import threading 
+import phrase
 
 class Pydal:
 	
@@ -28,8 +29,22 @@ class Pydal:
 		msg.append(60.0/num)
 		self.superColliderClient.send(msg)
 
-
-
+	def rootScale(self, chan=0, root=0, scale='minor'):
+		msg = OSC.OSCMessage()
+		msg.setAddress('/rootScale')
+		msg.append(root)
+		keyval = scale
+		if scale in phrase.modes.keys():
+			keyval = ",".join(map(str, phrase.modes[scale]))
+		else:
+			keyval = scale.split(',')
+			keyval = map(lambda a: int(a.strip()), keyval)
+			if len(keyval) == 0:
+				raise StopIteration("malformed scale string")
+			keyval = ','.join(keyval)
+		msg.append(keyval)
+		msg.append(chan)
+		self.superColliderClient.send(msg)
 
 
 def read(rawStr, frac = 1.0):
@@ -39,6 +54,10 @@ def read(rawStr, frac = 1.0):
 	#return PydalStringPattern(rawStr)
 
 pydalInstance = Pydal()
+
+def rootScale(chan=0, root=0, scale='minor'):
+	pydalInstance.rootScale(chan, root, scale)	
+
 
 def tempo(num):
 	pydalInstance.setTempo(num)
