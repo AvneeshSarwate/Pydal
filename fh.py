@@ -51,12 +51,6 @@ class FH:
 		self.roots[chanInd] = stuff[2]
 		self.scales[chanInd] = map(int, stuff[3].split(","))
 
-	def sendLoop(self, chanInd, loop):
-		msg = OSC.OSCMessage()
-		msg.setAddress("/liveCodeEndpoint")
-		msg.append(self.hitListToString(loop, chanInd, 5))
-		self.superColliderClient.send(msg)
-
 	@staticmethod 
 	def stringToHitList(loopString):
 		lineSplit = loopString.split(" ")
@@ -233,13 +227,13 @@ def randTranspose(hitList, root, scale, down=3, up=3, start=None, end=None, beat
 
 def randBeatMove(hitList):
 	beatList = notesByBeat(hitListToNoteList(hitList))
-	i = random.randint(0, len(beatList))
+	i = random.randint(0, len(beatList)-1)
 	k = random.choice(list(set(range(len(beatList))) - set([i])))
 	if i > k:
 		beatList.insert(k, beatList.pop(i))
 	else :
 		beatList.insert(k-1, beatList.pop(i))
-	return beatList
+	return noteListToHitList(flattenByBeat(beatList))
 
 
 def treeFunc(hitList, root, scale, p=0.3):
