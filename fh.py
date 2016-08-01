@@ -2,6 +2,7 @@ import OSC
 import threading
 import random
 import copy
+import phrase
 
 #functionHanlder
 class FH:
@@ -18,12 +19,19 @@ class FH:
 		n = 4
 
 		self.loops = [[0]*n for i in range(n)]
+		self.loopInfo = [[{}]*n for i in range(n)]
+
+		#[(loops, loopInfo)]
+		self.scenes = [0]*100 # scenes[18] is scene in 1st row 8th column of launchpad  
+
+		#todo - update scales/roots here when changed programatically?
 		self.scales = [0]*4
 		self.roots = [0]*4
 
 		self.superColliderServer.addMsgHandler("/algRequest", self.handleAlgRequest)
 		self.superColliderServer.addMsgHandler("/saveLoop", self.saveNewLaunchpadLoop)
 		self.superColliderServer.addMsgHandler("/algRequestUpdate", self.updateChannel)
+		self.superColliderServer.addMsgHandler("/loopPlay", self.loopPlay)
 
 		self.channels = {} #key - int, val - (transFunc, rootMel)
 		self.savedStrings = []
@@ -48,8 +56,14 @@ class FH:
 		hitList, button, startBeat = self.stringToHitList(stuff[4])
 		chanInd, bankNum = stuff[:2]
 		self.loops[chanInd][bankNum] = hitList
+		self.loopInfo[chanInd][bankNum]["button"] = button
 		self.roots[chanInd] = stuff[2]
 		self.scales[chanInd] = map(int, stuff[3].split(","))
+
+	#stuff = [chanInd, bankNum, playing(bool)]
+	def loopPlay(self, addr, tags, stuff, source):
+		self.loopInfo[stuff[0]][stuff[1]]["playing"] = stuff[2]
+
 
 	@staticmethod 
 	def stringToHitList(loopString):
@@ -61,8 +75,31 @@ class FH:
 		return recBuf, lineSplit[0], lineSplit[2]
 
 	@staticmethod
-	def hitListToString(hitList, button, startBeat):
-		return str(button) + " " + "-".join(map(lambda h: ",".join(map(str, h)), hitList)) + " " + str(startBeat)
+	def hitListToString(hitList, button, startBeat, playing=0):
+		return str(button) + " " + "-".join(map(lambda h: ",".join(map(str, h)), hitList)) + " " + str(startBeat) + " " + str(playing)
+
+	@staticmethod
+	def sceneToString(loops, loopsInfo):
+		sceneStringList = []
+		for i in range(len(loops)):
+			for j in range(len(loops[i])):
+				if loops[i][j] != 0:
+					sceneStringList.push(self.hitListToString(loops[i][j], loopInfo[i][j]["button"], "startBeat", 1 if loopInfo[i][j]["playing"] else 0))
+				else:
+					sceneStringList.push("none")
+		return ":".join(sceneStringList)
+
+	def sendScene(self, ind):
+		msg = OSC.OSCMessage()
+		msg.setAddress("/sendScene")
+		if self.scenes[ind] == 0:
+			return
+		msg.append(self.sceneToString(*self.scenes[ind]))
+		msg.append(",".join(self.roots))
+		msg.append(",".join([".".join(scale) for scale in self.scales]))
+		self.superColliderClient.send(msg)
+
+
 
 	def end(self):
 		self.superColliderServer.close()
@@ -88,6 +125,22 @@ class FH:
 		msg.append(self.hitListToString(newMel, 'fillerStuff', 'fillerStuff'))
 		self.superColliderClient.send(msg)
 
+	def rootScale(self, chan=0, root=0, scale='minor'):
+		msg = OSC.OSCMessage()
+		msg.setAddress('/rootScale')
+		msg.append(root)
+		keyval = scale
+		if scale in phrase.modes.keys():
+			keyval = ",".join(map(str, phrase.modes[scale]))
+		else:
+			keyval = scale.split(',')
+			keyval = map(lambda a: int(a.strip()), keyval)
+			if len(keyval) == 0:
+				raise StopIteration("malformed scale string")
+			keyval = ','.join(keyval)
+		msg.append(keyval)
+		msg.append(chan)
+		self.superColliderClient.send(msg)	
 
 	def stopChannel(self, chanInd):
 		msg = OSC.OSCMessage()
