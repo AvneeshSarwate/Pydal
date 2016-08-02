@@ -25,8 +25,8 @@ class FH:
 		self.scenes = [0]*100 # scenes[18] is scene in 1st row 8th column of launchpad  
 
 		#todo - update scales/roots here when changed programatically?
-		self.scales = [0]*4
-		self.roots = [0]*4
+		self.scales = [[0, 2, 3, 5, 7, 8, 10] for i in range(n-1)] + [range(12)]
+		self.roots = [60]*4
 
 		self.superColliderServer.addMsgHandler("/algRequest", self.handleAlgRequest)
 		self.superColliderServer.addMsgHandler("/saveLoop", self.saveNewLaunchpadLoop)
@@ -78,15 +78,15 @@ class FH:
 	def hitListToString(hitList, button, startBeat, playing=0):
 		return str(button) + " " + "-".join(map(lambda h: ",".join(map(str, h)), hitList)) + " " + str(startBeat) + " " + str(playing)
 
-	@staticmethod
-	def sceneToString(loops, loopsInfo):
+
+	def sceneToString(self, loops, loopInfo):
 		sceneStringList = []
 		for i in range(len(loops)):
 			for j in range(len(loops[i])):
 				if loops[i][j] != 0:
-					sceneStringList.push(self.hitListToString(loops[i][j], loopInfo[i][j]["button"], "startBeat", 1 if loopInfo[i][j]["playing"] else 0))
+					sceneStringList.append(self.hitListToString(loops[i][j], loopInfo[i][j]["button"], "startBeat", 1 if loopInfo[i][j]["playing"] else 0))
 				else:
-					sceneStringList.push("none")
+					sceneStringList.append("none")
 		return ":".join(sceneStringList)
 
 	def sendScene(self, ind):
@@ -95,8 +95,8 @@ class FH:
 		if self.scenes[ind] == 0:
 			return
 		msg.append(self.sceneToString(*self.scenes[ind]))
-		msg.append(",".join(self.roots))
-		msg.append(",".join([".".join(scale) for scale in self.scales]))
+		msg.append(",".join(map(str, self.roots)))
+		msg.append(",".join([".".join(map(str, scale)) for scale in self.scales]))
 		self.superColliderClient.send(msg)
 
 
