@@ -23,6 +23,7 @@ class FH:
 
 		#[(loops, loopInfo)]
 		self.scenes = [0]*100 # scenes[18] is scene in 1st row 8th column of launchpad  
+		self.sceneStack = []
 
 		#todo - update scales/roots here when changed programatically?
 		self.scales = [[0, 2, 3, 5, 7, 8, 10] for i in range(n-1)] + [range(12)]
@@ -32,6 +33,8 @@ class FH:
 		self.superColliderServer.addMsgHandler("/saveLoop", self.saveNewLaunchpadLoop)
 		self.superColliderServer.addMsgHandler("/algRequestUpdate", self.updateChannel)
 		self.superColliderServer.addMsgHandler("/loopPlay", self.loopPlay)
+		self.superColliderServer.addMsgHandler("/saveScene", self.saveSceneHandler)
+		self.superColliderServer.addMsgHandler("/playScene", self.playSceneHandler)
 
 		self.channels = {} #key - int, val - (transFunc, rootMel)
 		self.savedStrings = []
@@ -89,17 +92,38 @@ class FH:
 					sceneStringList.append("none")
 		return ":".join(sceneStringList)
 
-	def sendScene(self, ind):
+	def sendScene(loops, loopInfo, roots, scales):
 		msg = OSC.OSCMessage()
 		msg.setAddress("/sendScene")
-		if self.scenes[ind] == 0:
-			return
-		msg.append(self.sceneToString(*self.scenes[ind]))
-		msg.append(",".join(map(str, self.roots)))
-		msg.append(",".join([".".join(map(str, scale)) for scale in self.scales]))
+		msg.append(self.sceneToString(loops, loopInfo))
+		msg.append(",".join(map(str, roots)))
+		msg.append(",".join([".".join(map(str, scale)) for scale in scales]))
 		self.superColliderClient.send(msg)
 
+	def sendCurrentScene(self):
+		sendScene(self.loops, self.loopInfo, self.roots, self.scales):
 
+	#stuff[0] is ind of pad to which to save scene
+	def saveSceneHandler(self, addr, tags, stuff, source):
+		self.saveScene(stuff[0])
+
+	def saveScene(self, ind):
+		c = copy.deepcopy
+		self.scenes[ind] = (c(self.loops), c(self.loopInfo), c(self.roots), c(self.scales))
+
+	#stuff[0] is ind of pad corresponding to which scene to play
+	def playSceneHandler(self, addr, tags, stuff, source):
+		self.playScene(stuff[0])
+
+	def playScene(self, ind):
+		c = copy.deepcopy
+		self.sceneStack.append((c(self.loops), c(self.loopInfo), c(self.roots), c(self.scales)))
+		self.loops, self.loopInfo, self.roots, self.scales = self.scenes[ind]
+		self.sendCurrentScene()
+
+	def undoScenePlay(self):
+		self.loops, self.loopInfo, self.roots, self.scales = self.sceneStack.pop()
+		self.sendCurrentScene()
 
 	def end(self):
 		self.superColliderServer.close()
