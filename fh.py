@@ -19,7 +19,7 @@ class FH:
 		n = 4
 
 		self.loops = [[0]*n for i in range(n)]
-		self.loopInfo = [[{}]*n for i in range(n)]
+		self.loopInfo = [[{} for j in range(n)] for i in range(n)]
 
 		#[(loops, loopInfo)]
 		self.scenes = [0]*100 # scenes[18] is scene in 1st row 8th column of launchpad  
