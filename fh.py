@@ -27,7 +27,7 @@ class FH:
 
 		#todo - update scales/roots here when changed programatically?
 		self.scales = [[0, 2, 3, 5, 7, 8, 10] for i in range(n-1)] + [range(12)]
-		self.roots = [60]*4
+		self.roots = [60, 60, 36, 36]
 
 		self.superColliderServer.addMsgHandler("/algRequest", self.handleAlgRequest)
 		self.superColliderServer.addMsgHandler("/saveLoop", self.saveNewLaunchpadLoop)
@@ -60,6 +60,7 @@ class FH:
 		chanInd, bankNum = stuff[:2]
 		self.loops[chanInd][bankNum] = hitList
 		self.loopInfo[chanInd][bankNum]["button"] = button
+		self.loopInfo[chanInd][bankNum]["playing"] = True
 		self.roots[chanInd] = stuff[2]
 		self.scales[chanInd] = map(int, stuff[3].split(","))
 
@@ -92,7 +93,7 @@ class FH:
 					sceneStringList.append("none")
 		return ":".join(sceneStringList)
 
-	def sendScene(loops, loopInfo, roots, scales):
+	def sendScene(self, loops, loopInfo, roots, scales):
 		msg = OSC.OSCMessage()
 		msg.setAddress("/sendScene")
 		msg.append(self.sceneToString(loops, loopInfo))
@@ -101,11 +102,11 @@ class FH:
 		self.superColliderClient.send(msg)
 
 	def sendCurrentScene(self):
-		sendScene(self.loops, self.loopInfo, self.roots, self.scales):
+		self.sendScene(self.loops, self.loopInfo, self.roots, self.scales)
 
 	#stuff[0] is ind of pad to which to save scene
 	def saveSceneHandler(self, addr, tags, stuff, source):
-		self.saveScene(stuff[0])
+		self.saveScene(int(stuff[0]))
 
 	def saveScene(self, ind):
 		c = copy.deepcopy
@@ -113,7 +114,7 @@ class FH:
 
 	#stuff[0] is ind of pad corresponding to which scene to play
 	def playSceneHandler(self, addr, tags, stuff, source):
-		self.playScene(stuff[0])
+		self.playScene(int(stuff[0]))
 
 	def playScene(self, ind):
 		c = copy.deepcopy
