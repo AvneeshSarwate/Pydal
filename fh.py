@@ -119,7 +119,7 @@ class FH:
 	def playScene(self, ind):
 		c = copy.deepcopy
 		self.sceneStack.append((c(self.loops), c(self.loopInfo), c(self.roots), c(self.scales)))
-		self.loops, self.loopInfo, self.roots, self.scales = self.scenes[ind]
+		self.loops, self.loopInfo, self.roots, self.scales = c(self.scenes[ind])
 		self.sendCurrentScene()
 
 	def undoScenePlay(self):
