@@ -13,6 +13,11 @@ All AST nodes have a render() method that renders the pattern to a list - [(floa
 
 When a pattern is played on a PydalChannel, the channel object renders 1 measure's worth of the pattern, and sends it over to PydalSC.scd, which schedules that set of events. Before the last even plays, PydalSC requests the next buffer's worth of events from the PydalChannel object. 
 
+Syntax additions - 2 new types of brackets:
+- "(pat1, pat2)"" - will play the patterns sequentially every time it is rendered
+- "&lt;pat1, pat2&gt;" - will randomly select what pattern to play every time it is rendered
+	- I am aware this is done with "()" in tidalCycles currently, but when I first implemented this it wasn't there. Will likely update this when I get around to adding in all of the new stuff that's made its way into the tidal syntax since this project was started. 
+
 Entry points to start with for reading the code
 - in Python
 	- PydalChannel.read - start of parsing a string into the AST
