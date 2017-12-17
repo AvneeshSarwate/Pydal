@@ -22,9 +22,6 @@ import itertools
 import string 
 import tidalTreeAssembler as nodes
 
-def parse(inputStr):
-    tokens = tokenize(inputStr)
-    return parseExpression(tokens, 0)[0]
 
 def tokenize(inputStr):
     delimiters = ["]", "[", "{", "}", "<", ">" "*", "x", ",", ")", "("]
@@ -49,8 +46,40 @@ def isEndParen(s):
 def isComma(s):
     return s == ","
 #TODO: more conditions required to determine valid symbol 
-def isSymbol(s): 
+def isPydalSymbol(s): 
     return allIn(s, string.letters+string.digits+":"+"~") and s[0] != ":" and s[-1] != ":"
+def isSampleSymbol(s):
+    return re.match('^[a-g][a-g]:[0-9](\.[0-9]+)?_[0-9](\.[0-9]+)?$', s) or s == "~"
+def isMaxSymbol(s):
+    return re.match('^[a-d]:[0-9](\.[0-9]+)?(_[0-9](\.[0-9]+)?)?$', s) or s == "~"
+def isArpeggiatorSymbol(s):
+    return s.isdigit() or s == "~"
+def isChordSeqSymbol(s):
+    return re.match('^[a-h][a-h]$', s) or s == "~"
+def isBallState(s):
+    return s in 'abcdefghijk~' and len(s) == 1
+def isFuncTrigger(s):
+    return s in 'abcdefghijklmnopqrs~' and len(s) == 1
+
+
+symbolMatchers = {}
+symbolMatchers['pydal'] = isPydalSymbol
+symbolMatchers['sample'] = isSampleSymbol
+symbolMatchers['arp'] = isArpeggiatorSymbol
+symbolMatchers['max'] = isMaxSymbol
+symbolMatchers['chord'] = isChordSeqSymbol
+symbolMatchers['ballState'] = isBallState
+symbolMatchers['funcTrigger'] = isFuncTrigger
+
+
+def parse(inputStr, symbolKey = 'pydal'):
+    tokens = tokenize(inputStr)
+    symbolMatcher = symbolMatchers[symbolKey]
+    node = parseExpression(tokens, 0, symbolMatcher)[0]
+    node.type = symbolKey
+    return node
+
+
 
 # through all the parse* functions
 # ind should always point to the next token to be read
@@ -72,7 +101,7 @@ def parseSymbol(tokenList, ind):
 
 
 
-def parseParenBlock(tokenList, ind, parseDebug = False):
+def parseParenBlock(tokenList, ind, isSymbol, parseDebug = False):
     startInd = ind
     openParen = tokenList[ind]
     if openParen == "[":
@@ -86,7 +115,7 @@ def parseParenBlock(tokenList, ind, parseDebug = False):
     ind += 1
 
     while not isEndParen(tokenList[ind]):
-        expNode, newInd = parseExpression(tokenList, ind)
+        expNode, newInd = parseExpression(tokenList, ind, isSymbol)
         node.children.append(expNode)
         if isComma(tokenList[newInd]):
             newInd += 1
@@ -107,7 +136,7 @@ def parseParenBlock(tokenList, ind, parseDebug = False):
 
 
 
-def parseExpression(tokenList, ind):
+def parseExpression(tokenList, ind, isSymbol):
     
     node = nodes.ExpressionNode([])
 
@@ -120,7 +149,7 @@ def parseExpression(tokenList, ind):
             node.children.append(symbolOrMultNode)
 
         elif isOpenParen(tokenList[ind]):
-            parenOrMultNode, newInd = parseParenBlock(tokenList, ind)
+            parenOrMultNode, newInd = parseParenBlock(tokenList, ind, isSymbol)
             node.children.append(parenOrMultNode)
         else:
             raise StopIteration("can only start expressions with symbols or open paren: ") 

@@ -62,6 +62,7 @@ class PydalNode:
 	def __init__(self, children):
 		self.children = children
 		self.frac = sum(map(lambda c : c.frac, children))
+		self.type = "" #the type of thing that this pydal pattern is sequencing
 
 
 	def __add__(self, b):

@@ -1,18 +1,23 @@
 //tempoclock with beat set to 1 cycle length
-(var midiOut, pythonOSCport, channelPatternMap, chanBackupPatMap, channelInd, drumTypes, startPattern, playStepGenerator, recieveBackupPattern, stopPattern, patternRead, timeListToDurationList, sendSample, midiChannel, masterTempoClock, tempoClockMap, loopStartFunctions, masterClockBeat, masterClockTempoHandler;
+(var midiOut, pythonOSCport, channelPatternMap, chanBackupPatMap, channelInd, drumTypes, startPattern, playStepGenerator, recieveBackupPattern, stopPattern, patternRead, timeListToDurationList, sendSample, midiChannel, masterTempoClock, tempoClockMap, loopStartFunctions, masterClockBeat, masterClockTempoHandler, channelTypeMap, python_FH_OSCport, channelMetaInfo, changeChannelTempo, syncClocks, instrumentMidiOut, maxPort, lemurBouncePort, chanPhaseTrackerTasks, ballVisualPort;
 
-//MIDIClient.init; TODO: move this into masterTempoClock.scd
 midiOut = MIDIOut.newByName("IAC Driver", "Bus 3");
+instrumentMidiOut = MIDIOut.newByName("IAC Driver", "Bus 2");
 midiOut.latency = 0;
 pythonOSCport = NetAddr("localhost", 34345);
+python_FH_OSCport = NetAddr("localhost", 13371);
+maxPort = NetAddr("localhost", 5432);
+ballVisualPort = NetAddr("localhost", 7400);
+lemurBouncePort = NetAddr("localhost", 7100);
 
-//TODO: implement tempoclock per channel (with synched beats)
-//masterTempoClock = TempoClock.new(1);
 channelPatternMap = Dictionary();
 chanBackupPatMap = Dictionary();
 channelInd = Dictionary();
 tempoClockMap = Dictionary();
 loopStartFunctions = Dictionary();
+channelTypeMap = Dictionary();
+channelMetaInfo = Dictionary();
+chanPhaseTrackerTasks = Dictionary();
 
 //TODO - parametrize this
 midiChannel = 0;
@@ -35,61 +40,80 @@ drumTypes["aud"] = 108;
 
 //msg[1] is the channel being played on
 //msg[2] is the string pattern getting played
+//msg[3] is the total length in beats of the pattern
+//msg[4] is the "type" of the pattern
+//msg[5...] is meta-pattern info (contextual per type)
 startPattern = {|msg, time, addr, recvPort|
-	//parse string to pattern
-	var patternList, loopFrac, ind, startDelay, chanClock;
-	["PLAY START", msg[2]].postln;
-	patternList = patternRead.(msg[2].asString);
+    //parse string to pattern
+    var patternList, loopFrac, ind, startDelay, chanClock;
+    ["PLAY START", msg[2], masterTempoClock.beats].postln;
+    patternList = patternRead.(msg[2].asString);
 
-	//save pattern to map
-	channelPatternMap[msg[1]] = timeListToDurationList.(patternList);
-	chanBackupPatMap[msg[1]] = [];
+    maxPort.sendRaw((["/pattern", msg[1].asInt] ++ patternList.collect({|elem| elem[0]})).asArray.asRawOSC);
 
-	//create channel tempo clock if needed
-	if(tempoClockMap.keys.includes(msg[1]).not,
-		{
-			chanClock = TempoClock.new(masterTempoClock.tempo, masterTempoClock.beats);
-			tempoClockMap[msg[1]] = chanClock;
-			chanClock.beats = masterTempoClock.beats;
-		},
-		{chanClock = tempoClockMap[msg[1]]}
-	);
+    //save pattern to map
+    channelPatternMap[msg[1]] = timeListToDurationList.(patternList, msg[3].asFloat);
+    chanBackupPatMap[msg[1]] = [];
 
-	chanClock.clear;
+    channelTypeMap[msg[1]] = msg[4].asSymbol;
+    channelMetaInfo[msg[1]] = msg[5..];
 
-	tempoClockMap.values.do({|v| v.beats.postln;});
+    //create channel tempo clock if needed
+    if(tempoClockMap.keys.includes(msg[1]).not,
+        {
+            chanClock = TempoClock.new(masterTempoClock.tempo, masterTempoClock.beats);
+            tempoClockMap[msg[1]] = chanClock;
+            chanClock.beats = masterTempoClock.beats;
+        },
+        {chanClock = tempoClockMap[msg[1]]}
+    );
 
-	/*channelInd[msg[1]] = 0;
-	chanClock.sched(chanClock.timeToNextBeat, playStepGenerator.(msg[1]));*/
+    if(chanPhaseTrackerTasks[msg[1]].isNil, {
+        chanPhaseTrackerTasks[msg[1]] = Task({
+            {
+                maxPort.sendMsg("/phaseVal", msg[1].asInt, (masterTempoClock.beats-tempoClockMap[msg[1]].beats)%1);
+                0.03.wait;
+            }.loop
+        });
+        chanPhaseTrackerTasks[msg[1]].play;
+    });
 
-	channelInd[msg[1]] = 0;
+    chanClock.clear;
 
-	loopStartFunctions[msg[1]] = {chanClock.sched(0, playStepGenerator.(msg[1]))};
+    tempoClockMap.values.do({|v| v.beats.postln;});
+
+    /*channelInd[msg[1]] = 0;
+    chanClock.sched(chanClock.timeToNextBeat, playStepGenerator.(msg[1]));*/
+    tempoClockMap[msg[1]].clear();
+    channelInd[msg[1]] = 0;
+
+    loopStartFunctions[msg[1]] = {chanClock.sched(0, playStepGenerator.(msg[1]))};
 };
 OSCFunc(startPattern, "/pydalPlay");
 
 
+//TODO - use tasks here instead? (tasks are cleaner but this could be more flexible)
 playStepGenerator = {|i|
 	var playStep = {
 		//if list len == 0, exit
 		var retVal = nil;
+
+        //if last step (or < 20 ms from end?), set backupPat to actual pattern
+        if((channelInd[i] == 0) && (chanBackupPatMap[i].size > 0), {
+            //"LOADED BACKUP".postln;
+            channelPatternMap[i] = chanBackupPatMap[i]
+        });
+
 		if(channelPatternMap[i].size != 0, {
 			var ind = channelInd[i];
 			var patList = channelPatternMap[i];
 			var step = patList[ind];
 			var dur = step[0];
 
-			step[1].do({|samp| sendSample.(samp)});
-			["STEP", i, ind, tempoClockMap[i].beats%1, step].postln;
+			step[1].do({|samp| sendSample.(samp, i, ind)});
+			//["STEP", i, ind, tempoClockMap[i].beats%1, step].postln;
 
-			//if 2nd to last step, send request for next pattern TODO: won't work for patterns len 1?
-			if(ind == (patList.size-2), {pythonOSCport.sendMsg("/pydalGetUpdate-"++i)});
-
-			//if last step (or < 20 ms from end?), set backupPat to actual pattern
-			if(ind == (patList.size-1), {
-				//"DID BACKUP".postln;
-				channelPatternMap[i] = chanBackupPatMap[i]
-			});
+			if(ind == (patList.size-1), {pythonOSCport.sendMsg("/pydalGetUpdate-"++i)});
 
 			//update indexes appropriately
 			channelInd[i] = (ind+1)%patList.size;
@@ -105,20 +129,72 @@ playStepGenerator = {|i|
 };
 
 
+//msg[1] is the tempo (in bmp)
+//msg[2] is the channelKey to change the clock for
+changeChannelTempo = {|msg, time, addr, recvPort|
+    //create channel tempo clock if needed
+    //[msg, tempoClockMap.keys].postln;
+    if(tempoClockMap.keys.includes(msg[2]),{
+        tempoClockMap[msg[2]].tempo = msg[1].asFloat/60;
+
+        //maxPort.sendMsg("/phaseVal", msg[2].asInt, (masterTempoClock.beats-tempoClockMap[msg[2]].beats)%1);
+    });
+};
+OSCFunc(changeChannelTempo, "/changeChannelTempo");
+
+
+//msg[1] is type of sync "phase, tempo, both"
+//msg[2] is key of clock to sync to
+//msg[3...] is keys of other clocks to sync
+syncClocks = {|msg, time, addr, recvPort|
+    //create channel tempo clock if needed
+    if(tempoClockMap.keys.includes(msg[2]) || (msg[2].asSymbol == 'master'),{
+        var refClock = if(msg[2].asSymbol == 'master', masterTempoClock, tempoClockMap[msg[2]]);
+        msg[3..].do({|key|
+           if(tempoClockMap.keys.includes(key), {
+                var clockToSync = tempoClockMap[key];
+                if(['tempo', 'both'].includes(msg[1].asSymbol), {clockToSync.tempo = refClock.tempo});
+                if(['phase', 'both'].includes(msg[1].asSymbol), {
+                    clockToSync.clear;
+                    clockToSync.beats = refClock.beats;
+                    channelInd[key] = 0;
+                    if(chanBackupPatMap[key].isNil.not, {clockToSync.sched(refClock.timeToNextBeat, playStepGenerator.(key))});
+                });
+            });
+        });
+        if(['phase', 'both'].includes(msg[1].asSymbol), {
+            var refKey = msg[2];
+            refClock.clear;
+            channelInd[refKey] = 0;
+            if(chanBackupPatMap[refKey].isNil.not, {refClock.sched(refClock.timeToNextBeat, playStepGenerator.(refKey))});
+        });
+    });
+};
+OSCFunc(syncClocks, "/syncClocks");
+
 //msg[1] is the channel being played on
 //msg[2] is the backup pattern
+//msg[3] is the total length in beats of the pattern
 recieveBackupPattern = {|msg, time, addr, recvPort|
 	//parse string and save it to backupmap
 	//["GOT BACKUP", msg[2]].postln;
-	chanBackupPatMap[msg[1]] = timeListToDurationList.(patternRead.(msg[2].asString));
+
+    var patternList = patternRead.(msg[2].asString);
+    maxPort.sendRaw((["/pattern", msg[1].asInt] ++ patternList.collect({|elem| elem[0]})).asArray.asRawOSC);
+
+    chanBackupPatMap[msg[1]] = timeListToDurationList.(patternList,  msg[3].asFloat);
 };
 OSCFunc(recieveBackupPattern, "/pydalSendUpdate");
-
 
 //msg[1] is ind of channel to stop
 stopPattern = {|msg, time, addr, recvPort|
 	if(channelPatternMap.keys.includes(msg[1]), {channelPatternMap[msg[1]] = []});
 	["STOP PATTERN", channelPatternMap.keys.includes(msg[1]), msg[1]].postln;
+    masterTempoClock.sched(masterTempoClock.timeToNextBeat - 0.01, {tempoClockMap[msg[1]].clear()});
+    chanBackupPatMap[msg[1]] = nil;
+    if(channelTypeMap[msg[1]] == 'loop', {
+        instrumentMidiOut.allNotesOff(channelMetaInfo[msg[1]][0]);
+    });
 };
 OSCFunc(stopPattern, "/pydalStop");
 
@@ -162,31 +238,62 @@ patternRead = {|patternStr|
 	patternList
 };
 
-timeListToDurationList = {|oldList|
-	var pList = List.new;
-	if(oldList.size > 1,
-		{
-			(0..oldList.size-2).do({|i|
-				pList.add([oldList[i+1][0] - oldList[i][0], oldList[i][1]]);
-			});
+timeListToDurationList = {|oldList, totalLength|
+    var pList = List.new;
+    if(oldList.size > 1,
+        {
+            (0..oldList.size-2).do({|i|
+                pList.add([oldList[i+1][0] - oldList[i][0], oldList[i][1]]);
+            });
 
-	});
-	pList.add([oldList[oldList.size-1][0].ceil - oldList[oldList.size-1][0], oldList[oldList.size-1][1]]);
-	pList
+    });
+    pList.add([totalLength - oldList[oldList.size-1][0], oldList[oldList.size-1][1]]);
+
+    pList
 };
 
-sendSample = {|drumStr|
-	var drumInd, drumType;
-	drumInd = drumStr.split($:)[1];
-	drumInd = if(drumInd.isNil, 0, {drumInd.asInteger});
-	drumType = drumTypes[drumStr.split($:)[0]].asInteger;
+//TODO - handle ~ (rest) for existing types
+sendSample = {|drumStr, chan, ind|
+    if(channelTypeMap[chan] == 'pydal', {
+        var drumInd, drumType, patMidiChannel;
+        drumInd = drumStr.split($:)[1];
+        drumInd = if(drumInd.isNil, 0, {drumInd.asInteger});
+        drumType = drumTypes[drumStr.split($:)[0]].asInteger;
+        patMidiChannel = if(channelMetaInfo[chan][0].isNil, midiChannel, channelMetaInfo[chan][0]);
 
-	//todo - send cc map stuff if applicable
-	Task({
-		midiOut.noteOn(midiChannel, drumType+drumInd); //maybe add velocity based on gain?
-		0.001.wait;
-		midiOut.noteOff(midiChannel, drumType+drumInd);
-	}).play;
+        maxPort.sendMsg("/hitInfo", chan.asInt, ind.asInt, (masterTempoClock.beats-tempoClockMap[chan].beats)%1);
+
+        //todo - send cc map stuff if applicable
+        Task({
+            midiOut.noteOn(patMidiChannel, drumType+drumInd); //maybe add velocity based on gain?
+            0.001.wait;
+            midiOut.noteOff(patMidiChannel, drumType+drumInd);
+        }).play;
+    });
+
+    //aa is top-left, but remapped to coordinates where 0,0 is bottom-left, to match chordScenePad
+    /*channelMetaInfo has 1 element - the midiChannel number of the spatializer.py object that
+     the playChord info will be sent to*/
+    if(channelTypeMap[chan] == 'chord', {
+        var rowChar = "hgfedcba";
+        var colChar = "abcdefgh";
+        var ind = rowChar.find(drumStr[0])*10 + colChar.find(drumStr[1]);
+        python_FH_OSCport.sendMsg("/playChord-" ++ channelMetaInfo[chan][0].asString, ind);
+    });
+    if(channelTypeMap[chan] == 'loop', {
+        var drumSplit = drumStr.split($^);
+        var hitInfo;
+        ["DRUM SPLIT", drumSplit].postln;
+        hitInfo = [drumSplit[0].asInt, drumSplit[1].asInt, drumSplit[2].asInt, drumSplit[3]];
+        if(hitInfo[3].asSymbol == 'on', {instrumentMidiOut.noteOn(hitInfo[2], hitInfo[0], hitInfo[1])});
+        if(hitInfo[3].asSymbol == 'off', {instrumentMidiOut.noteOff(hitInfo[2], hitInfo[0], hitInfo[1])});
+    });
+    if(channelTypeMap[chan] == 'ballState', {
+        ballVisualPort.sendMsg("/loadWorld", drumStr);
+    });
+    if(channelTypeMap[chan] == 'funcTrigger', {
+        lemurBouncePort.sendMsg("/funcTrigger", drumStr);
+    });
 };
 
 )
