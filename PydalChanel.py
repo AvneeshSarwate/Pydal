@@ -1,5 +1,5 @@
 import OSC
-import cleanParser as parser
+import PydalParser as parser
 import copy
 import threading 
 
@@ -43,7 +43,7 @@ def read(rawStr, frac = 1.0, symbolKey = 'pydal'):
 	#return PydalStringPattern(rawStr)
 
 #pydalInstance = Pydal()
-def getInstance(port=('127.0.0.1', 34345)):
+def getPydalInstance(port=('127.0.0.1', 34345)):
 	return Pydal(port)
 
 # def tempo(num):

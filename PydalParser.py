@@ -20,11 +20,12 @@
 import re
 import itertools
 import string 
-import tidalTreeAssembler as nodes
+import PydalAssembler as nodes
 
+
+delimiters = ["]", "[", "{", "}", "<", ">" "*", "x", ",", ")", "("]
 
 def tokenize(inputStr):
-    delimiters = ["]", "[", "{", "}", "<", ">" "*", "x", ",", ")", "("]
     p = "([" + "".join(delimiters) + "])"
     dirtyTokens = map(str.split, re.split(p, inputStr))
     tokens = list(itertools.chain.from_iterable(dirtyTokens))
@@ -72,6 +73,9 @@ symbolMatchers['ballState'] = isBallState
 symbolMatchers['funcTrigger'] = isFuncTrigger
 
 
+# you can define what types of strings you use as tokens, they can
+# be anything, provided it doesn't contain any of the reserved characters
+# listed in the 'delimiters' variable above
 def parse(inputStr, symbolKey = 'pydal'):
     tokens = tokenize(inputStr)
     symbolMatcher = symbolMatchers[symbolKey]

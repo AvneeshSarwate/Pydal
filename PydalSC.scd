@@ -22,6 +22,8 @@ chanPhaseTrackerTasks = Dictionary();
 //TODO - parametrize this
 midiChannel = 0;
 
+
+//mapping of drum strings to midi notes corresponding to my personal Ableton setup
 drumTypes = Dictionary();
 drumTypes["~"] = 1;
 drumTypes["bd"] = 30;
@@ -38,11 +40,11 @@ drumTypes["bin"] = 102;
 drumTypes["bend"] = 104;
 drumTypes["aud"] = 108;
 
-//msg[1] is the channel being played on
-//msg[2] is the string pattern getting played
+//msg[1] is the key identifying the channel being played on
+//msg[2] is the string representation of the pattern getting played
 //msg[3] is the total length in beats of the pattern
 //msg[4] is the "type" of the pattern
-//msg[5...] is meta-pattern info (contextual per type)
+//msg[5...] is meta-pattern info for this channel (contextual per pattern type)
 startPattern = {|msg, time, addr, recvPort|
     //parse string to pattern
     var patternList, loopFrac, ind, startDelay, chanClock;
@@ -172,6 +174,8 @@ syncClocks = {|msg, time, addr, recvPort|
 };
 OSCFunc(syncClocks, "/syncClocks");
 
+
+
 //msg[1] is the channel being played on
 //msg[2] is the backup pattern
 //msg[3] is the total length in beats of the pattern
@@ -186,6 +190,8 @@ recieveBackupPattern = {|msg, time, addr, recvPort|
 };
 OSCFunc(recieveBackupPattern, "/pydalSendUpdate");
 
+
+
 //msg[1] is ind of channel to stop
 stopPattern = {|msg, time, addr, recvPort|
 	if(channelPatternMap.keys.includes(msg[1]), {channelPatternMap[msg[1]] = []});
@@ -198,12 +204,15 @@ stopPattern = {|msg, time, addr, recvPort|
 };
 OSCFunc(stopPattern, "/pydalStop");
 
+
+//start the clock for this module so that it is in sync/phase with the master clock
 f = {|msg, time, addr, recvPort|
 	//msg[1] is the new BEAT DURATION (not tempo)
 	masterTempoClock = TempoClock.new(1/msg[1], 0);
 	t = masterTempoClock;
 };
 OSCFunc(f, "/masterClockBeat").oneShot;
+
 
 //msg[1] is the new BEAT DURATION (not tempo)
 masterClockTempoHandler = {|msg, time, addr, recvPort|
