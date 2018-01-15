@@ -1,3 +1,4 @@
+# A simple Recursive Descent Parser. Grammar in Backus-Naur Form as follows - 
 #
 # <expression>  ::= <symbol> [(<mult> <number>)] | <paren-block> [(<mult> <number>)] | <expression> [(<expression>)]...  
 # 
