@@ -12,7 +12,14 @@
 
 #<mult>		   ::= "*"
 
-#<symbol>	   ::=  \/ ^  <  > \/! ^!  <!  >!
+#<symbol>	   ::=  (passes isSymbol function - \/ ^  <  > \/! ^!  <!  >! with variants)
+
+
+# new syntax not in original paper: 
+# 	- You can go down to the nth child with \/:n (indexes wrap around if n > numChildren)
+#	- You can move forwards/backwards n steps among siblings with >:n and <:n (indexes wrap around)
+#	- For instructions suffixed with @, the node value arrived at via that instruction will 
+#		be returned in a traversal list. See treeBuilder.execute() for simple implementation
 
 
 import re
@@ -35,10 +42,6 @@ def tokenize(inputStr):
 	#print " ".join(tokens)
 	return tokens
 
-# To get child/sibling indexing for free, rather than each "token" being
-# a string, have each "token" be a regex. For non-indexed tokens, the
-# string in this array would stay the same. But for indexed tokens, 
-# (s in {<, >, \/}), it would be the regex '(s(:[0-9]+)?)$'
 def isSymbol(sym):
 	symbolTypes = ['(\\\/(:[0-9]+)?@?)$', '\^@?', '(<(:[0-9]+)?@?)$', '(>(:[0-9]+)?@?)$', '\\\/!@?', '<!@?', '>!@?']
 	return True in [re.match(s, sym) and True for s in symbolTypes]

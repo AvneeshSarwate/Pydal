@@ -4,20 +4,22 @@
 midiOut = MIDIOut.newByName("IAC Driver", "Bus 3");
 instrumentMidiOut = MIDIOut.newByName("IAC Driver", "Bus 2");
 midiOut.latency = 0;
+
+//endpoints for various applications that I control using Pydal
 pythonOSCport = NetAddr("localhost", 34345);
 python_FH_OSCport = NetAddr("localhost", 13371);
 maxPort = NetAddr("localhost", 5432);
 ballVisualPort = NetAddr("localhost", 7400);
 lemurBouncePort = NetAddr("localhost", 7100);
 
-channelPatternMap = Dictionary();
-chanBackupPatMap = Dictionary();
-channelInd = Dictionary();
-tempoClockMap = Dictionary();
-loopStartFunctions = Dictionary();
-channelTypeMap = Dictionary();
-channelMetaInfo = Dictionary();
-chanPhaseTrackerTasks = Dictionary();
+channelPatternMap = Dictionary();        //maps channelKey -> currently playing buffer on that pattern
+chanBackupPatMap = Dictionary();         //maps channelKey -> buffer to be queued up next
+channelInd = Dictionary();               //maps channelKey -> index in the hit buffer that has most recently been played
+tempoClockMap = Dictionary();            //maps channelKey -> the clock that the channel runs on
+loopStartFunctions = Dictionary();       //a place holder variable used in the implementation of syncing the start of a loop to a quantized beat
+channelTypeMap = Dictionary();           //maps channelKey -> the type-string of the channel
+channelMetaInfo = Dictionary();          //maps channelKey -> the extra info necessary for playing that channel instance
+chanPhaseTrackerTasks = Dictionary();    //The speed of the clocks running each channel can be sped-up/slowed individually. This tracks their relative phase compared to the master clock.
 
 //TODO - parametrize this
 midiChannel = 0;
@@ -40,6 +42,7 @@ drumTypes["bin"] = 102;
 drumTypes["bend"] = 104;
 drumTypes["aud"] = 108;
 
+//OSC endpoint that starts the playing of a pattern
 //msg[1] is the key identifying the channel being played on
 //msg[2] is the string representation of the pattern getting played
 //msg[3] is the total length in beats of the pattern
@@ -94,6 +97,7 @@ startPattern = {|msg, time, addr, recvPort|
 OSCFunc(startPattern, "/pydalPlay");
 
 
+//A function that schedules an individual hit to occur and handles the state change throughout the progression of a buffer
 //TODO - use tasks here instead? (tasks are cleaner but this could be more flexible)
 playStepGenerator = {|i|
 	var playStep = {
@@ -130,7 +134,7 @@ playStepGenerator = {|i|
 	playStep
 };
 
-
+// endpoint for changing the tempo of a single channel
 //msg[1] is the tempo (in bmp)
 //msg[2] is the channelKey to change the clock for
 changeChannelTempo = {|msg, time, addr, recvPort|
@@ -145,6 +149,7 @@ changeChannelTempo = {|msg, time, addr, recvPort|
 OSCFunc(changeChannelTempo, "/changeChannelTempo");
 
 
+// allows for the resyncing of the tempo and/or phase of an arbitrary subset of channels
 //msg[1] is type of sync "phase, tempo, both"
 //msg[2] is key of clock to sync to
 //msg[3...] is keys of other clocks to sync
@@ -214,6 +219,7 @@ f = {|msg, time, addr, recvPort|
 OSCFunc(f, "/masterClockBeat").oneShot;
 
 
+//allows Pydal to be clock-synced to other running SuperCollider applications
 //msg[1] is the new BEAT DURATION (not tempo)
 masterClockTempoHandler = {|msg, time, addr, recvPort|
 	//(0..3).do({|i| metronomeClocks[i].tempo = 1/msg[1].asFloat})
@@ -235,7 +241,7 @@ masterClockBeat = {|msg, time, addr, recvPort|
 };
 OSCFunc(masterClockBeat, "/masterClockBeat");
 
-
+//parses the string representation of the buffer into a SuperCollider array
 patternRead = {|patternStr|
 	var patternList = List.new;
 	patternStr.split($;).do({|s|
@@ -247,6 +253,7 @@ patternRead = {|patternStr|
 	patternList
 };
 
+//further formatting of the incoming buffer to an easier representation for scheduling
 timeListToDurationList = {|oldList, totalLength|
     var pList = List.new;
     if(oldList.size > 1,
@@ -261,6 +268,7 @@ timeListToDurationList = {|oldList, totalLength|
     pList
 };
 
+// handles what happens during a "hit" for all of the different channel types
 //TODO - handle ~ (rest) for existing types
 sendSample = {|drumStr, chan, ind|
     if(channelTypeMap[chan] == 'pydal', {
